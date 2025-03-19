@@ -15,6 +15,7 @@
   "dependencies": {
     "fastify": "^5.2.1",
     "fastify-plugin": "^5.0.1",
+    "fatura-flow-api": "file:",
     "mongoose": "^8.10.1",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2"
