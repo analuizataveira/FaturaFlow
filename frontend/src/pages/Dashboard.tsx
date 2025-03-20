@@ -20,7 +20,7 @@ export default function Dashboard() {
     input.addEventListener('change', (event: Event) => {
       const fileEvent = event as FileChangeEvent;
       const file = fileEvent.target.files?.[0];
-      
+
       if (file) {
         readCSVFile(file);
       }
@@ -70,21 +70,33 @@ export default function Dashboard() {
   return (
     <div>
       <NavBar page={"Dashboard"} />
-      <div style={{ padding: '20px' }}>
-        <button 
-          onClick={handleCSVImport}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '5px',
-            cursor: 'pointer'
-          }}
-        >
-          Importar CSV
-        </button>
+      <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
+        <h2 className="text-center text-base/7 font-semibold text-indigo-600">FaturaFlow</h2>
+        <p className="mx-auto mt-2 max-w-lg text-balance text-center text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
+          Tudo que você precisa para gerenciar suas finanças
+        </p>
+        <div className="mt-10 grid gap-4 sm:mt-16 lg:grid-cols-3 lg:grid-rows-1">
+          <div className="relative max-lg:row-start-1">
+            <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
+              <div className="px-8 pb-3 pt-8 sm:px-10 sm:pb-10 sm:pt-10">
+                <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center">
+                  Importação
+                </p>
+                <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
+                  Aqui você pode importar seus dados financeiros em formato CSV.
+                </p>
+                <button className="btn btn-info mt-4"
+                  onClick={handleCSVImport}>
+                  Importar CSV
+                  </button>
+
+              </div>
+            </div>
+            <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]"></div>
+          </div>
+        </div>
       </div>
     </div>
-  );
+
+  )
 }

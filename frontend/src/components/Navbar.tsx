@@ -14,7 +14,7 @@ const navigation = [
     { name: 'Histórico', href: '/history' },
 ];
 const userNavigation = [
-    { name: 'Settings', href: '/settings' },
+    { name: 'Criar Usuário', href: '/settings' },
     { name: 'Sign out', href: '/login' },
 ];
 
@@ -46,7 +46,7 @@ export default function NavBar (navbarProps: NavBarProps) {
     return (
         <div className="min-h-full ">
             <Disclosure as="nav" className="mb-4 bg-gray-600 bg-opacity-10">
-                <div className="w-full px-4 sm:px-6 lg:px-8">
+                <div className="w-full px-4 sm:px-5 lg:px-5">
                     <div className="flex h-20 items-center justify-between">
                         <div className="flex items-center">
                             <div className="hidden md:block">
