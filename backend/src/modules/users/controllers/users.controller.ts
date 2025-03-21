@@ -9,7 +9,7 @@ const create = async (request: FastifyRequest, reply: FastifyReply) => {
 
   const result = await usersService.create(userData);
 
-  return reply.status(200).send(result);
+  return reply.status(201).send(result);
 };
 
 const findById = async (request: FastifyRequest, reply: FastifyReply) => {
@@ -19,13 +19,13 @@ const findById = async (request: FastifyRequest, reply: FastifyReply) => {
 
   const result = await usersService.findById(id);
 
-  return result;
+  return reply.status(200).send(result);
 };
 
 const find = async (request: FastifyRequest, reply: FastifyReply) => {
   const result = await usersService.find();
 
-  return result;
+  return reply.status(201).send(result);
 };
 
 export default { create, findById, find };
