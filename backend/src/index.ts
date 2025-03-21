@@ -1,5 +1,6 @@
 import Fastify, { FastifyInstance, RouteShorthandOptions } from "fastify";
 import { invoiceRoutes } from "./modules/invoices/routes/invoices.route";
+import { usersRoutes } from "./modules/users/routes/users.route";
 
 const server: FastifyInstance = Fastify({ logger: true });
 
@@ -19,6 +20,8 @@ const opts: RouteShorthandOptions = {
 };
 
 server.register(invoiceRoutes, { prefix: "/api/invoices" });
+server.register(usersRoutes, { prefix: "/api/users" });
+
 server.get("/ping", opts, async (request, reply) => {
   return { pong: "it worked!" };
 });
