@@ -6,5 +6,8 @@ export const usersRoutes = (
   done: () => void
 ) => {
   fastify.post("/", usersController.create);
+  fastify.get("/:id", usersController.findById);
+  fastify.get("/users", usersController.find);
+
   done();
 };

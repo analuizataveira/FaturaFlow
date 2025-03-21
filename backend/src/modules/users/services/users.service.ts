@@ -1,7 +1,19 @@
 import usersRepository from "../repositories/users.repository";
 
-const create = async () => {
-  return usersRepository.create();
+const create = async (user: {
+  name: string;
+  email: string;
+  password: string;
+}) => {
+  return usersRepository.create(user);
 };
 
-export default { create };
+const findById = async (id: string) => {
+  return usersRepository.findById(id);
+};
+
+const find = async () => {
+  return await usersRepository.find();
+};
+
+export default { create, findById, find };
