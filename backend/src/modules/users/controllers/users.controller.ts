@@ -28,4 +28,14 @@ const find = async (request: FastifyRequest, reply: FastifyReply) => {
   return reply.status(201).send(result);
 };
 
-export default { create, findById, find };
+const softDelete = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { params } = request;
+
+  const id = mongooseIdDTO(params);
+
+  const result = await usersService.softDelete(id);
+
+  return reply.status(200).send(result);
+};
+
+export default { create, findById, find, softDelete };
