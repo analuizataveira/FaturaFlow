@@ -34,7 +34,5 @@ describe ('App teste',()=>{
         cy.url().should('eq', 'http://localhost:5173/dashboard');
       });
 
-
-
 });
     

@@ -65,10 +65,10 @@ export default function UserForm() {
             />
           </div>
           <div className="sm:col-span-2">
-            <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-900">Phone number</label>
+            <label htmlFor="phoneNumber" className="block text-sm font-semibold text-gray-900">Password</label>
             <input
-              id="phoneNumber"
-              name="phoneNumber"
+              id="password"
+              name="password"
               type="text"
               value={user.phoneNumber}
               onChange={handleChange}

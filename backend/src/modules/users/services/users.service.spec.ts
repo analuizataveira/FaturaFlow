@@ -107,7 +107,6 @@ describe("Users Service", () => {
       ...mockedUser,
       isDeleted: true,
     });
-
     const result = await usersService.softDelete("2");
 
     expect(result).toMatchObject({
@@ -115,4 +114,22 @@ describe("Users Service", () => {
       isDeleted: true,
     });
   });
+
+  it("should throw an error if users already exists on soft delete", async () => {
+    const mockedUser = {
+      id: "1",
+      name: "Jeca",
+      email: "jeca@gmail.com",
+      password: "teste123",
+    };
+
+    mockerUserRepository.findByEmail.mockResolvedValueOnce(null);
+
+    const result = await usersService.softDelete(mockedUser.id);
+
+    expect(result).toStrictEqual({
+      msg: "User not found",
+    });
+  });
+
 });
