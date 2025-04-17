@@ -11,7 +11,7 @@ const mockerUserRepository = usersRepository as jest.Mocked<
 describe("Users Service", () => {
   it("should create a user", async () => {
     const mockedUser = {
-      id: randomInt(20),
+      id: "2",
       name: "Jeca",
       email: "jeca@gmail.com",
       password: "teste123",
@@ -23,7 +23,7 @@ describe("Users Service", () => {
 
     expect(result).toStrictEqual({
       ...mockedUser,
-      id: expect.any(Number),
+      id: expect.any(String),
     });
   });
 
@@ -39,9 +39,7 @@ describe("Users Service", () => {
 
     const result = await usersService.create(mockedUser);
 
-    expect(result).toStrictEqual({
-      msg: "User already exists",
-    });
+    expect(result).toStrictEqual(null);
   });
 
   it("should find a user by id", async () => {
@@ -75,14 +73,16 @@ describe("Users Service", () => {
   it("should find all users", async () => {
     const mockedUsers = [
       {
-        id: 2,
+        id: "2",
         name: "Jeca",
         email: "jeca@gmail.com",
+        password: "crypto",
       },
       {
-        id: 2,
+        id: "2",
         name: "Jeca",
         email: "jeca@gmail.com",
+        password: "crypto",
       },
     ];
 

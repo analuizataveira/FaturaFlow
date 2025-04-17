@@ -2,12 +2,26 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import usersService from "../services/users.service";
 import { createUserDTO } from "../dtos/create.dto";
 import { mongooseIdDTO } from "../../../shared/dtos/mongo-id.dto";
+import { loginDTO } from "../dtos/login.dto";
+
+const login = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { body } = request;
+  const { email, password } = loginDTO(body);
+
+  const result = await usersService.login({ email, password });
+
+  reply.status(200).send(result);
+};
 
 const create = async (request: FastifyRequest, reply: FastifyReply) => {
   const { body } = request;
   const userData = createUserDTO(body);
 
   const result = await usersService.create(userData);
+
+  if (!result) {
+    return reply.status(400).send({ msg: "Email already exists" });
+  }
 
   return reply.status(201).send(result);
 };
@@ -38,4 +52,4 @@ const softDelete = async (request: FastifyRequest, reply: FastifyReply) => {
   return reply.status(200).send(result);
 };
 
-export default { create, findById, find, softDelete };
+export default { login, create, findById, find, softDelete };
