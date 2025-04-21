@@ -37,9 +37,9 @@ describe("Users Service", () => {
 
     mockerUserRepository.findByEmail.mockResolvedValueOnce(mockedUser);
 
-    const result = await usersService.create(mockedUser);
-
-    expect(result).toStrictEqual(null);
+    await expect(usersService.create(mockedUser)).rejects.toThrow(
+      "Email already exists"
+    );
   });
 
   it("should find a user by id", async () => {
@@ -63,11 +63,7 @@ describe("Users Service", () => {
   it("should throw an error if users doesnt exists", async () => {
     mockerUserRepository.findByEmail.mockResolvedValueOnce(null);
 
-    const result = await usersService.findById("2");
-
-    expect(result).toStrictEqual({
-      msg: "User not found",
-    });
+    await expect(usersService.findById("2")).rejects.toThrow("User not found");
   });
 
   it("should find all users", async () => {
