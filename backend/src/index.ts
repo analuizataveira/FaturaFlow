@@ -29,9 +29,30 @@ const opts: RouteShorthandOptions = {
   },
 };
 
+server.setErrorHandler((error, request, reply) => {
+  server.log.error(error);
+
+  if (error.statusCode) {
+    reply.status(error.statusCode).send({
+      status: "error",
+      message: error.message,
+      code: error.code || "SERVER_ERROR",
+    });
+    return;
+  }
+
+  reply.status(500).send({
+    status: "error",
+    message:
+      process.env.NODE_ENV === "production"
+        ? "Internal server error"
+        : error.message,
+    code: "SERVER_ERROR",
+  });
+});
+
 server.register(invoiceRoutes, { prefix: "/api/invoices" });
 server.register(usersRoutes, { prefix: "/api/users" });
-
 server.get("/ping", opts, async (request, reply) => {
   return { pong: "it worked!" };
 });
@@ -40,7 +61,7 @@ const start = async () => {
   try {
     await server.listen({
       port: Number(process.env.PORT) || 3000,
-      host: "0.0.0.0",
+      host: process.env.HOST || "localhost",
     });
     console.log(
       `Server running on http://localhost:${process.env.PORT || 3000}`

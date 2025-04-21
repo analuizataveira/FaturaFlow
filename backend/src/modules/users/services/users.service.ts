@@ -1,11 +1,17 @@
 import usersRepository from "../repositories/users.repository";
 import authService from "../../auth/services/auth.service";
+import {
+  BadRequestError,
+  NotFoundError,
+  UnauthorizedError,
+} from "../../../shared/handlers/error-handler";
+import defaultErrorMessages from "../../../shared/exceptions";
 
 const login = async (user: { email: string; password: string }) => {
   const foundUser = await usersRepository.findByEmail(user.email);
 
   if (!foundUser) {
-    return { msg: "User not found!" };
+    throw new NotFoundError(defaultErrorMessages.USER_NOT_FOUND);
   }
 
   const isAuthenticated = await authService.comparePassword(
@@ -14,7 +20,7 @@ const login = async (user: { email: string; password: string }) => {
   );
 
   if (!isAuthenticated) {
-    return { msg: "Password mismtach!" };
+    throw new UnauthorizedError(defaultErrorMessages.INVALID_PASSWORD);
   }
 
   const { email, name } = foundUser;
@@ -32,7 +38,7 @@ const create = async (user: {
   const userAlreadyExists = await usersRepository.findByEmail(user.email);
 
   if (userAlreadyExists) {
-    return null;
+    throw new BadRequestError(defaultErrorMessages.EMAIL_ALREADY_EXISTS);
   }
 
   return await usersRepository.create({
@@ -45,7 +51,7 @@ const findById = async (id: string) => {
   const user = await usersRepository.findById(id);
 
   if (!user) {
-    return { msg: "User not found" };
+    throw new NotFoundError(defaultErrorMessages.USER_NOT_FOUND);
   }
 
   return user;
@@ -59,7 +65,7 @@ const softDelete = async (id: string) => {
   const user = await usersRepository.findById(id);
 
   if (!user) {
-    return { msg: "User not found" };
+    throw new NotFoundError(defaultErrorMessages.USER_NOT_FOUND);
   }
 
   return await usersRepository.softDelete(id);
