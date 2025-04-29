@@ -1,5 +1,5 @@
 import Fastify, { FastifyInstance, RouteShorthandOptions } from "fastify";
-import { invoiceRoutes } from "./modules/invoices/routes/invoices.route";
+import { invoicesRoutes } from "./modules/invoices/routes/invoices.route";
 import { usersRoutes } from "./modules/users/routes/users.route";
 import { mongoConnect, mongoDisconnect } from "./database/mongoose-connect";
 import fastifyCors from "@fastify/cors";
@@ -51,7 +51,7 @@ server.setErrorHandler((error, request, reply) => {
   });
 });
 
-server.register(invoiceRoutes, { prefix: "/api/invoices" });
+server.register(invoicesRoutes, { prefix: "/api/invoices" });
 server.register(usersRoutes, { prefix: "/api/users" });
 server.get("/ping", opts, async (request, reply) => {
   return { pong: "it worked!" };
