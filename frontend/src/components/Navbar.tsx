@@ -7,8 +7,6 @@ import { useNavigate } from 'react-router-dom';
 
 
 const user = {
-    name: 'Tom Cook',
-    email: 'tom@example.com',
     imageUrl: 'https://static.poder360.com.br/2019/04/foto-oficial-Bolsonaro-774x644.png'
 };
 const navigation = [

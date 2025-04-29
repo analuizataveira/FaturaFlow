@@ -77,7 +77,6 @@ export default function Login() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="block w-full bg-slate-50 border border-slate-600 focus:border-slate-900 rounded-md px-3 py-2"
-                placeholder="seu@email.com"
               />
             </div>
 
@@ -94,7 +93,6 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 className="block w-full bg-slate-50 border border-slate-600 focus:border-slate-900 rounded-md px-3 py-2"
-                placeholder="••••••••"
               />
             </div>
 
