@@ -2,16 +2,15 @@ import { useEffect, useState } from 'react';
 import Modal from "../../components/Modal";
 import NavBar from "../../components/Navbar";
 import { Invoice } from '../../models/Invoice';
-import { createInvoice, getCurrentDateFormatted, getInvoicesByUserId } from '../../services/InvoiceService';
+import { createInvoice, getCurrentDateFormatted } from '../../services/InvoiceService';
 import AnalysisResults from './AnalysisResults';
 import InvoicesList from './InvoicesList';
 
-type InvoiceFormProps = {
-  onSubmit?: Function;
-}
 
-const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
+const InvoiceForm = () => {
   const [invoicesList, setInvoicesList] = useState<Invoice[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState(false);
+
   const [invoice, setInvoice] = useState<Invoice>({
     date: getCurrentDateFormatted(),
     description: '',
@@ -40,21 +39,12 @@ const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
     }
   }, [user]);
 
-  
+
   const handleCloseHelp = () => {
     setShowHelpModal(false);
     localStorage.setItem('hasSeenCostsHelp', 'true');
   };
 
-  const refreshInvoices = async () => {
-    try {
-      const invoices = await getInvoicesByUserId(user?.id || '');
-      setInvoicesList(invoices);
-    } catch (error) {
-      console.error("Erro ao buscar faturas:", error);
-      // Mantém a lista atual se a atualização falhar
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -64,23 +54,24 @@ const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
     }));
   };
 
+  // Modifique a função handleSubmit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
+
     if (!invoice.description || !invoice.value || !invoice.category || !invoice.payment) {
       setErrorMessage("Por favor, preencha todos os campos obrigatórios");
       return;
     }
-  
+
     try {
-      const createdInvoice = await createInvoice({
+      await createInvoice({
         ...invoice,
         userId: user?.id || ''
       });
-  
-      // Atualiza o estado local
-      setInvoicesList(prev => [...prev, createdInvoice]);
-  
+
+      // Atualiza o trigger para forçar o refresh
+      setRefreshTrigger(prev => !prev);
+
       // Reseta o formulário
       setInvoice({
         _id: '',
@@ -91,13 +82,9 @@ const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
         payment: '',
         userId: user?.id || ''
       });
-  
+
       setErrorMessage("");
-  
-      // Recarrega a lista completa do servidor para garantir sincronização
-      await refreshInvoices();
-  
-      if (onSubmit) onSubmit();
+
     } catch (error) {
       console.error("Erro ao adicionar transação:", error);
       setErrorMessage("Ocorreu um erro ao adicionar a transação");
@@ -117,7 +104,6 @@ const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
       <Modal
         isOpen={showHelpModal}
         onCloseClick={handleCloseHelp}
-        modalId="help-modal"
       >
         <div className="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-lg">
           <div className="flex justify-between items-start mb-4">
@@ -175,25 +161,15 @@ const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
                   </svg>
                   Transporte
                 </span>
-                {/* Adicione outras categorias conforme necessário */}
               </div>
             </div>
 
             <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
               <h3 className="text-lg font-semibold text-green-800 mb-2">Análise de gastos</h3>
               <p className="text-gray-700">
-                Após registrar várias despesas, use o botão <strong>"Salvar tudo"</strong> para gerar relatórios e gráficos que ajudam você a entender seus padrões de gastos.
+                Após registrar várias despesas, use o botão <strong>"Gerar análise"</strong> para gerar relatórios e gráficos que ajudam você a entender seus padrões de gastos.
               </p>
             </div>
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <button
-              onClick={handleCloseHelp}
-              className="btn btn-primary px-6"
-            >
-              Entendi
-            </button>
           </div>
         </div>
       </Modal>
@@ -276,22 +252,24 @@ const InvoiceForm = ({ onSubmit }: InvoiceFormProps) => {
               >
                 <option value="">Selecione</option>
                 <option value="Dinheiro">Dinheiro</option>
-                <option value="Cartão de crédito">Cartão</option>
-                <option value="Cartão de débito">Débito</option>
+                <option value="Cartão de crédito">Cartão de Crédito</option>
+                <option value="Cartão de débito">Cartão de Débito</option>
                 <option value="Pix">Pix</option>
               </select>
             </div>
             <button type="submit" className="btn btn-primary">Adicionar</button>
           </form>
-            <InvoicesList
-              invoices={invoicesList}
-              onInvoiceDelete={(id) => {
-                setInvoicesList(prev => prev.filter(invoice => invoice._id !== id));
-              }}
-            />
-          </div>
+          <InvoicesList
+            refreshTrigger={refreshTrigger}
+            onInvoiceDelete={(id) => {
+              setInvoicesList(prev => prev.filter(invoice => invoice._id !== id));
+              setRefreshTrigger(prev => !prev);
+            }}
+          />
+
         </div>
       </div>
+    </div>
   );
 };
 

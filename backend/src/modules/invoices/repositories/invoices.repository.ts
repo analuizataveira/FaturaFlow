@@ -69,6 +69,12 @@ const remove = async (id: string): Promise<boolean> => {
   return result.deletedCount === 1;
 };
 
+// Função para deletar todos os invoices de um usuário
+const removeAllByUserId = async (userId: string): Promise<boolean> => {
+  const result = await InvoiceModel.deleteMany({ userId }).lean();
+  return result.deletedCount > 0;
+}
+
 export default {
   create,
   findById,
@@ -76,4 +82,5 @@ export default {
   findByUserId,
   update,
   remove,
+  removeAllByUserId
 };

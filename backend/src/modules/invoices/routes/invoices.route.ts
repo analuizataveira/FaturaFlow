@@ -11,7 +11,8 @@ export const invoicesRoutes = (
   fastify.get("/:id", invoicesController.findOne);
   fastify.get("/users/:id", invoicesController.findAll);
   fastify.patch("/:id", invoicesController.update);
-  fastify.delete("/:id", {}, invoicesController.delete);
+  fastify.delete("/:id", {}, invoicesController.deleteInvoice);
+  fastify.delete("/users/:id", {}, invoicesController.deleteAll);
 
   done();
 };

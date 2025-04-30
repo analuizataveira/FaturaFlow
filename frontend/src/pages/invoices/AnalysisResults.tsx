@@ -1,6 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState } from 'react';
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 import { Invoice } from '../../models/Invoice';
+import { FiSave } from 'react-icons/fi';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -9,28 +12,36 @@ interface AnalysisResultsProps {
   onClose: () => void;
 }
 
+interface SavedAnalysis {
+  id: string;
+  date: string;
+  analysisText: string;
+  chartData: any;
+  totalAmount: number;
+}
+
 export default function AnalysisResults({ transactions, onClose }: AnalysisResultsProps) {
-  // Função para gerar a análise de gastos
+  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>(() => {
+    const saved = localStorage.getItem('savedAnalyses');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const generateSpendingAnalysis = (transactions: Invoice[]): string => {
-    // Calcular totais por categoria
     const categories = transactions.reduce((acc, transaction) => {
       if (!acc[transaction.category]) {
         acc[transaction.category] = 0;
       }
-      acc[transaction.category] += transaction.value; // Alterado de amount para value
+      acc[transaction.category] += transaction.value;
       return acc;
     }, {} as Record<string, number>);
     
-    // Calcular total geral
     const total = Object.values(categories).reduce((sum, value) => sum + value, 0);
     
-    // Encontrar categoria com maior gasto
     const highestCategory = Object.entries(categories).reduce((max, [category, value]) => 
       value > max.value ? { category, value } : max, 
       { category: '', value: 0 }
     );
     
-    // Gerar texto de análise
     return `Análise dos seus gastos:
 
 📅 Período: ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
@@ -47,19 +58,57 @@ ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)}
 3️⃣ Compare com meses anteriores para identificar padrões`;
   };
 
-  // Gerar a análise
+  const saveAnalysis = () => {
+    const analysisText = generateSpendingAnalysis(transactions);
+    
+    const categories = transactions.reduce((acc, transaction) => {
+      if (!acc[transaction.category]) {
+        acc[transaction.category] = 0;
+      }
+      acc[transaction.category] += transaction.value;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const total = Object.values(categories).reduce((sum, value) => sum + value, 0);
+
+    const chartData = {
+      labels: Object.keys(categories),
+      datasets: [
+        {
+          data: Object.values(categories),
+          backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+            '#9966FF', '#FF9F40', '#8AC24A',
+          ],
+        },
+      ],
+    };
+
+    const newAnalysis: SavedAnalysis = {
+      id: Date.now().toString(),
+      date: new Date().toISOString(),
+      analysisText,
+      chartData,
+      totalAmount: total
+    };
+
+    const updatedAnalyses = [...savedAnalyses, newAnalysis];
+    setSavedAnalyses(updatedAnalyses);
+    localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
+    
+    alert('Análise salva com sucesso!');
+  };
+
   const analysisText = generateSpendingAnalysis(transactions);
 
-  // Agrupar transações por categoria para o gráfico
   const categories = transactions.reduce((acc, transaction) => {
     if (!acc[transaction.category]) {
       acc[transaction.category] = 0;
     }
-    acc[transaction.category] += transaction.value; // Alterado de amount para value
+    acc[transaction.category] += transaction.value;
     return acc;
   }, {} as Record<string, number>);
 
-  // Preparar dados para o gráfico
   const chartData = {
     labels: Object.keys(categories),
     datasets: [
@@ -113,7 +162,13 @@ ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)}
           </div>
         </div>
         
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-between">
+          <button 
+            onClick={saveAnalysis}
+            className="btn btn-secondary gap-2"
+          >
+            <FiSave /> Salvar Análise
+          </button>
           <button 
             onClick={onClose} 
             className="btn btn-primary"

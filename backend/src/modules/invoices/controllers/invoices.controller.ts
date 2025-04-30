@@ -47,7 +47,17 @@ const deleteInvoice = async (request: FastifyRequest, reply: FastifyReply) => {
 
   const id = mongooseIdDTO(params);
 
-  await invoicesService.delete(id);
+  await invoicesService.deleteInvoice(id);
+
+  return reply.status(204).send();
+};
+
+// Deletar tudo pelo UserId
+const deleteAll = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { params } = request;
+  const id = mongooseIdDTO(params);
+
+  await invoicesService.deleteByUserId(id);
 
   return reply.status(204).send();
 };
@@ -57,5 +67,6 @@ export default {
   findAll,
   findOne,
   update,
-  delete: deleteInvoice,
+  deleteInvoice,
+  deleteAll,
 };

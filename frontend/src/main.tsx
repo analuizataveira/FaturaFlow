@@ -6,12 +6,11 @@ import Login from './pages/LoginForm.tsx';
 import Menu from './pages/Menu.tsx';
 import UserForm from './pages/UserForm.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
-import { ModalStackProvider } from './contexts/ModalContext.tsx';
 import InvoiceForm from './pages/invoices/InvoicesForm.tsx';
+import HistoryPage from './pages/HistoryList.tsx';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-      <ModalStackProvider>
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Login />} />
@@ -31,8 +30,12 @@ createRoot(document.getElementById('root')!).render(
                 <InvoiceForm/>
               </ProtectedRoute>
             } />
+            <Route path = "/history" element={
+              <ProtectedRoute>
+                <HistoryPage />
+              </ProtectedRoute>
+            } />
           </Routes>
         </BrowserRouter>
-      </ModalStackProvider>
   </StrictMode>
 );

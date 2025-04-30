@@ -72,10 +72,22 @@ const deleteInvoice = async (id: string): Promise<{ message: string }> => {
   return { message: "Fatura deletada com sucesso" };
 };
 
+// Deletar tuo pelo userid
+const deleteByUserId = async (userId: string): Promise<{ message: string }> => {
+  const deleted = await invoicesRepository.removeAllByUserId(userId);
+
+  if (!deleted) {
+    throw new NotFoundError("Faturas não encontradas");
+  }
+
+  return { message: "Faturas deletadas com sucesso" };
+};
+
 export default {
   create,
   findById,
   findByUserId,
   update,
-  delete: deleteInvoice,
+  deleteInvoice,
+  deleteByUserId
 };
