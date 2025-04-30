@@ -23,10 +23,7 @@ export default function Login() {
         // Armazena o token e dados básicos do usuário
         localStorage.setItem("session", JSON.stringify({
           token: response.token,
-          user: {
-            email: response.email,
-            name: response.name
-          }
+          id: response.id
         }));
         navigate("/menu");
       } else {
@@ -45,14 +42,12 @@ export default function Login() {
 
   return (
     <div className="flex h-screen w-full">
-      {/* Metade esquerda - Efeito Visual */}
       <div className="w-1/2 h-full relative">
         <div className="absolute inset-0 overflow-hidden">
           <VantaHalo />
         </div>
       </div>
 
-      {/* Metade direita - Formulário */}
       <div className="w-1/2 flex items-center justify-center bg-white">
         <div className="w-full max-w-md p-8">
           <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
@@ -100,8 +95,8 @@ export default function Login() {
               type="submit"
               disabled={isLoading}
               className={`w-full py-2 px-4 text-white font-medium rounded-md transition-colors ${isLoading
-                  ? "bg-slate-500 cursor-not-allowed"
-                  : "bg-slate-900 hover:bg-slate-700"
+                ? "bg-slate-500 cursor-not-allowed"
+                : "bg-slate-900 hover:bg-slate-700"
                 }`}
             >
               {isLoading ? "Carregando..." : "Entrar"}

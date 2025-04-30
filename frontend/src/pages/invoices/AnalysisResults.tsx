@@ -1,40 +1,33 @@
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
+import { Invoice } from '../../models/Invoice';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-interface Transaction {
-  date: string;
-  description: string;
-  amount: number;
-  category: string;
-  paymentMethod: string;
-}
-
 interface AnalysisResultsProps {
-  transactions: Transaction[];
+  transactions: Invoice[];
   onClose: () => void;
 }
 
 export default function AnalysisResults({ transactions, onClose }: AnalysisResultsProps) {
   // Função para gerar a análise de gastos
-  const generateSpendingAnalysis = (transactions: Transaction[]): string => {
+  const generateSpendingAnalysis = (transactions: Invoice[]): string => {
     // Calcular totais por categoria
     const categories = transactions.reduce((acc, transaction) => {
       if (!acc[transaction.category]) {
         acc[transaction.category] = 0;
       }
-      acc[transaction.category] += transaction.amount;
+      acc[transaction.category] += transaction.value; // Alterado de amount para value
       return acc;
     }, {} as Record<string, number>);
     
     // Calcular total geral
-    const total = Object.values(categories).reduce((sum, amount) => sum + amount, 0);
+    const total = Object.values(categories).reduce((sum, value) => sum + value, 0);
     
     // Encontrar categoria com maior gasto
-    const highestCategory = Object.entries(categories).reduce((max, [category, amount]) => 
-      amount > max.amount ? { category, amount } : max, 
-      { category: '', amount: 0 }
+    const highestCategory = Object.entries(categories).reduce((max, [category, value]) => 
+      value > max.value ? { category, value } : max, 
+      { category: '', value: 0 }
     );
     
     // Gerar texto de análise
@@ -46,13 +39,12 @@ export default function AnalysisResults({ transactions, onClose }: AnalysisResul
 📊 Distribuição por categoria:
 ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)} (${((val/total)*100).toFixed(1)}%)`).join('\n')}
 
-🔝 Maior gasto: ${highestCategory.category} (R$ ${highestCategory.amount.toFixed(2)})
+🔝 Maior gasto: ${highestCategory.category} (R$ ${highestCategory.value.toFixed(2)})
 
 💡 Recomendações:
 1️⃣ Considere reduzir gastos em ${highestCategory.category}
 2️⃣ Revise pequenas despesas que somam grandes valores
-3️⃣ Compare com meses anteriores para identificar padrões"`;
-
+3️⃣ Compare com meses anteriores para identificar padrões`;
   };
 
   // Gerar a análise
@@ -63,7 +55,7 @@ ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)}
     if (!acc[transaction.category]) {
       acc[transaction.category] = 0;
     }
-    acc[transaction.category] += transaction.amount;
+    acc[transaction.category] += transaction.value; // Alterado de amount para value
     return acc;
   }, {} as Record<string, number>);
 

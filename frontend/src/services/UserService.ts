@@ -10,7 +10,9 @@ export async function userLogin(email: string, password: string) {
         if (!response || (response.status && response.status !== 200) || response.error) {
             throw new Error("Email ou senha inválidos. Por favor, verifique suas credenciais.");
         }
-        return response; // Retorna a resposta apenas se o login for bem-sucedido
+        console.log(response); 
+        return response // Retorna a resposta apenas se o login for bem-sucedido
+        
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
         // Trata outros erros genéricos

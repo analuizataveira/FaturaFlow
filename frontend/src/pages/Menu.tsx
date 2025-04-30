@@ -115,7 +115,7 @@ export default function Menu() {
                 </p>
                 <button 
                   className="btn btn-info mt-4 mx-auto block"
-                  onClick={() => navigate('/costsform')}
+                  onClick={() => navigate('/invoicesform')}
                 >
                   Inserir Manualmente
                 </button>
