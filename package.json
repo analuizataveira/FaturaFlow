@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@fastify/cors": "^11.0.1",
+    "@heroicons/react": "^2.2.0"
+  }
+}

@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router";
 import NavBar from "../components/Navbar";
 
 // Interface para o evento de mudança do input
@@ -28,6 +29,9 @@ export default function Menu() {
 
     input.click();
   };
+
+  const navigate = useNavigate();
+
 
   // Função para ler o conteúdo do arquivo
   const readCSVFile = (file: File): void => {
@@ -75,28 +79,52 @@ export default function Menu() {
         <p className="mx-auto mt-2 max-w-lg text-balance text-center text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
           Tudo que você precisa para gerenciar suas finanças
         </p>
-        <div className="mt-10 grid gap-4 sm:mt-16 lg:grid-cols-3 lg:grid-rows-1">
-          <div className="relative max-lg:row-start-1">
-            <div className="relative flex h-full flex-col overflow-hidden rounded-[calc(theme(borderRadius.lg)+1px)] lg:rounded-l-[calc(2rem+1px)]">
-              <div className="px-8 pb-3 pt-8 sm:px-10 sm:pb-10 sm:pt-10">
-                <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 max-lg:text-center">
+        
+        {/* Container principal com flex para alinhar os quadrados */}
+        <div className="flex flex-col lg:flex-row justify-between gap-4 mt-10"> 
+          {/* Primeiro quadrado */}
+          <div className="w-full lg:w-1/2">
+            <div className="relative">
+              <div className="px-8 pb-3 pt-8 sm:px-10 sm:pb-10 sm:pt-10 bg-white rounded-lg shadow">
+                <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 text-center">
                   Importação
                 </p>
-                <p className="mt-2 max-w-lg text-sm/6 text-gray-600 max-lg:text-center">
+                <p className="mt-2 text-sm/6 text-gray-600 text-center">
                   Aqui você pode importar seus dados financeiros em formato CSV.
                 </p>
-                <button className="btn btn-info mt-4"
-                  onClick={handleCSVImport}>
+                <button 
+                  className="btn btn-info mt-4 mx-auto block"
+                  onClick={handleCSVImport}
+                >
                   Importar CSV
-                  </button>
-
+                </button>
               </div>
+              <div className="pointer-events-none absolute inset-px rounded-lg ring-1 ring-black/5"></div>
             </div>
-            <div className="pointer-events-none absolute inset-px rounded-lg shadow ring-1 ring-black/5 lg:rounded-l-[2rem]"></div>
+          </div>
+  
+          {/* Segundo quadrado */}
+          <div className="w-full lg:w-1/2">
+            <div className="relative">
+              <div className="px-8 pb-3 pt-8 sm:px-10 sm:pb-10 sm:pt-10 bg-white rounded-lg shadow">
+                <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 text-center">
+                  Inserir dados manualmente
+                </p>
+                <p className="mt-2 text-sm/6 text-gray-600 text-center">
+                  Inserir dados referentes a fatura o cartão e outros gastos manualmente.
+                </p>
+                <button 
+                  className="btn btn-info mt-4 mx-auto block"
+                  onClick={() => navigate('/invoicesform')}
+                >
+                  Inserir Manualmente
+                </button>
+              </div>
+              <div className="pointer-events-none absolute inset-px rounded-lg ring-1 ring-black/5"></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-  )
+  );
 }

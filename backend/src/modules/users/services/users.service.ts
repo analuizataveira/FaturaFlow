@@ -23,11 +23,11 @@ const login = async (user: { email: string; password: string }) => {
     throw new UnauthorizedError(defaultErrorMessages.INVALID_PASSWORD);
   }
 
-  const { email, name } = foundUser;
+  const { id, email, name } = foundUser;
 
   const token = authService.createJWT({ email, name });
 
-  return { token };
+  return { token, id };
 };
 
 const create = async (user: {
