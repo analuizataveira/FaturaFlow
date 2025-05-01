@@ -23,7 +23,7 @@ describe('App teste', () => {
       const message = $input[0].validationMessage;
       expect(message).to.include('@'); // Deve mencionar o @
       expect(message).to.include('teste'); // Deve mencionar o valor inserido
-      expect(message).to.include('email'); // Deve mencionar email
+      expect(message).to.include('e-mail'); // Deve mencionar email
       
       // 3. Log para debug
       cy.log('Mensagem de validação real:', message);
