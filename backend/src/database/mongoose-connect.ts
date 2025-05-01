@@ -4,7 +4,7 @@ const mongo: string =
   process.env.MONGO ||
   "mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin";
 
-export function mongoConnect() {
+export async function mongoConnect() {
   connection
     .on("error", (error) => {
       console.log("ERROR: Connection to MongoDB failed", error);
@@ -17,12 +17,14 @@ export function mongoConnect() {
       const infos = connections;
       infos.map((info) =>
         console.log(
+          // eslint-disable-next-line prettier/prettier
           `Connected to ${info.host}:${info.port}/${info.name} mongo Database`
+          // eslint-disable-next-line prettier/prettier
         )
       );
     });
 
-  connect(mongo);
+  await connect(mongo);
 }
 
 export function mongoDisconnect() {

@@ -17,7 +17,7 @@ const findById = async (id: string): Promise<Invoice> => {
 };
 
 const findByUserId = async (
-  userId: string
+  userId: string,
 ): Promise<{
   totalAmount: number;
   categories: Record<string, { totalAmount: number; details: Invoice[] }>;
@@ -43,7 +43,7 @@ const findByUserId = async (
         string,
         { totalAmount: number; details: Invoice[] }
       >,
-    }
+    },
   );
 
   return result;
@@ -51,7 +51,7 @@ const findByUserId = async (
 
 const update = async (
   id: string,
-  data: Omit<Invoice, "id">
+  data: Omit<Invoice, "id">,
 ): Promise<Invoice> => {
   const updatedInvoice = await invoicesRepository.update(id, data);
 
@@ -89,5 +89,5 @@ export default {
   findByUserId,
   update,
   deleteInvoice,
-  deleteByUserId
+  deleteByUserId,
 };

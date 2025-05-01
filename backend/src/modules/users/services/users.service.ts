@@ -16,7 +16,7 @@ const login = async (user: { email: string; password: string }) => {
 
   const isAuthenticated = await authService.comparePassword(
     user.password,
-    foundUser.password
+    foundUser.password,
   );
 
   if (!isAuthenticated) {

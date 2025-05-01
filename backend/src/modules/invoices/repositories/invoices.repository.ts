@@ -27,7 +27,7 @@ const findById = async (id: string): Promise<Invoice | null> => {
 };
 
 const findAll = async (
-  filter: FilterQuery<Invoice> = {}
+  filter: FilterQuery<Invoice> = {},
 ): Promise<Invoice[]> => {
   const invoices = await InvoiceModel.find({
     ...filter,
@@ -46,12 +46,12 @@ const findByUserId = async (userId: string): Promise<Invoice[]> => {
 
 const update = async (
   id: string,
-  data: Partial<Invoice>
+  data: Partial<Invoice>,
 ): Promise<Invoice | null> => {
   const updatedInvoice = await InvoiceModel.findOneAndUpdate(
     { _id: id, isDeleted: false },
     data,
-    { new: true }
+    { new: true },
   ).lean();
 
   if (!updatedInvoice) {
@@ -73,7 +73,7 @@ const remove = async (id: string): Promise<boolean> => {
 const removeAllByUserId = async (userId: string): Promise<boolean> => {
   const result = await InvoiceModel.deleteMany({ userId }).lean();
   return result.deletedCount > 0;
-}
+};
 
 export default {
   create,
@@ -82,5 +82,5 @@ export default {
   findByUserId,
   update,
   remove,
-  removeAllByUserId
+  removeAllByUserId,
 };

@@ -18,10 +18,10 @@ const userSchema: Schema = new Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const mongooseUser = mongoose.model<mongooseUserType>(
   "User",
-  userSchema
+  userSchema,
 );

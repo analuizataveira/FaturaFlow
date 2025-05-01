@@ -6,11 +6,12 @@ import fastifyCors from "@fastify/cors";
 
 const server: FastifyInstance = Fastify({ logger: true });
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 mongoConnect();
 
 server.register(fastifyCors, {
   origin: "http://localhost:5173",
-  methods: ["GET", "POST", "PUT", "DELETE","PATCH"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 });
 
@@ -53,6 +54,7 @@ server.setErrorHandler((error, request, reply) => {
 
 server.register(invoicesRoutes, { prefix: "/api/invoices" });
 server.register(usersRoutes, { prefix: "/api/users" });
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 server.get("/ping", opts, async (request, reply) => {
   return { pong: "it worked!" };
 });
@@ -64,6 +66,7 @@ const start = async () => {
       host: process.env.HOST || "localhost",
     });
     console.log(
+      // eslint-disable-next-line prettier/prettier
       `Server running on http://localhost:${process.env.PORT || 3000}`
     );
   } catch (err) {
@@ -73,4 +76,5 @@ const start = async () => {
   }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-floating-promises
 start();

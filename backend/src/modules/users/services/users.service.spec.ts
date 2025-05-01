@@ -1,4 +1,3 @@
-import { randomInt } from "crypto";
 import usersRepository from "../repositories/users.repository";
 import usersService from "./users.service";
 
@@ -23,6 +22,7 @@ describe("Users Service", () => {
 
     expect(result).toStrictEqual({
       ...mockedUser,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       id: expect.any(String),
     });
   });
@@ -38,6 +38,7 @@ describe("Users Service", () => {
     mockerUserRepository.findByEmail.mockResolvedValueOnce(mockedUser);
 
     await expect(usersService.create(mockedUser)).rejects.toThrow(
+      // eslint-disable-next-line prettier/prettier
       "Email already exists"
     );
   });
@@ -56,6 +57,7 @@ describe("Users Service", () => {
 
     expect(result).toStrictEqual({
       ...mockedUser,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       id: expect.any(String),
     });
   });
