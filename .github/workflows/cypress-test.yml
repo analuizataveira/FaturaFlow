@@ -22,14 +22,6 @@ jobs:
           node-version: "20"
           cache: 'npm'
 
-      - name: Create Vanta.js type declaration
-        run: |
-          mkdir -p src/@types
-          echo "declare module 'vanta/dist/vanta.halo.min';" > src/@types/vanta.d.ts
-          # Update tsconfig.json
-          npm install -g jq
-          jq '.compilerOptions += {"typeRoots": ["./node_modules/@types", "./src/@types"], "noImplicitAny": false}' tsconfig.json > tmp.json && mv tmp.json tsconfig.json
-
       - name: Install dependencies
         run: npm ci
 
