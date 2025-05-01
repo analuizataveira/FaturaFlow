@@ -42,7 +42,6 @@ jobs:
             -e MONGO_INITDB_ROOT_USERNAME=admin \
             -e MONGO_INITDB_ROOT_PASSWORD=admin \
             mongo:6
-      
 
       - name: Wait for MongoDB
         run: |
@@ -54,8 +53,7 @@ jobs:
         run: npm run dev &
         env:
           PORT: 3000
-          MONGO:  mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin
-
+          MONGO: mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin
 
   build-frontend:
     needs: setup-backend
@@ -113,7 +111,7 @@ jobs:
 
       - name: Start frontend server
         run: npm run dev &
-      
+
       - name: Wait for frontend
         run: |
           echo "Waiting for frontend to be ready..."
@@ -128,6 +126,12 @@ jobs:
           spec: cypress/e2e/testelogin.cy.js
           config: baseUrl=http://localhost:5173
           record: false
+          config-file: cypress.config.js
+          env: language=pt-BR
+        env:
+          LANGUAGE: "pt_BR:pt"
+          LANG: "pt_BR.UTF-8"
+          LC_ALL: "pt_BR.UTF-8"
 
       - name: Upload test artifacts
         if: always()
