@@ -1,4 +1,4 @@
-name: FaturaFlow Frontend CI
+name: FaturaFlow CI Pipeline
 
 on:
   workflow_dispatch:
@@ -8,7 +8,40 @@ on:
     branches: [main]
 
 jobs:
+  setup-backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io docker-compose
+          sudo systemctl start docker
+          sudo docker --version
+          docker-compose --version
+
+      - name: Start PostgreSQL container
+        run: sudo docker-compose up -d
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run database migrations
+        run: npm run migration:run
+
+      - name: Start backend server
+        run: npm run dev &
+        env:
+          PORT: 3000
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/faturaflow
+
   build-frontend:
+    needs: setup-backend
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -41,16 +74,28 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Start frontend server
+        run: npm run dev &
+        
+      - name: Wait for frontend
+        run: |
+          echo "Waiting for frontend to be ready..."
+          npx wait-on http://localhost:5173 --timeout 120000
+          echo "Frontend is ready!"
+
+      - name: Wait for backend
+        run: |
+          echo "Waiting for backend to be ready..."
+          npx wait-on http://localhost:3000 --timeout 120000
+          echo "Backend is ready!"
+
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
           working-directory: frontend
-          build: npm run build
-          start: npm run dev
-          wait-on: 'http://localhost:5173'
-          wait-on-timeout: 120
           browser: chrome
           spec: cypress/e2e/testelogin.cy.js
+          config: baseUrl=http://localhost:5173
           record: false
 
       - name: Upload test artifacts

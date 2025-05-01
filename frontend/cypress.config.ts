@@ -1,11 +1,8 @@
- 
-import { defineConfig } from 'cypress'
+/* eslint-disable @typescript-eslint/no-require-imports */
+const { defineConfig } = require('cypress');
 
-
-export default defineConfig({
+module.exports = defineConfig({
   e2e: {
     baseUrl: 'http://localhost:5173',
-    screenshotOnRunFailure: true,
-    video: true,
-  }
+  },
 })

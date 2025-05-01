@@ -1,7 +1,7 @@
 describe('App teste', () => {
   it('Verifica se o pop-up de validação "Preencha este campo." é exibido', () => {
     cy.visit('http://localhost:5173/login');
-    cy.get(':nth-child(3) > .flex').click();
+    cy.get('.px-4').click();
     cy.get('#email').then(($input) => {
       expect($input[0].checkValidity()).to.be.false;
       expect($input[0].validationMessage).to.equal('Preencha este campo.');
@@ -38,6 +38,6 @@ describe('App teste', () => {
     cy.url().should('eq', 'http://localhost:5173/login');
 
     // Se houver alguma mensagem de erro visível
-    cy.contains('Credenciais inválidas').should('be.visible'); 
+    cy.contains('Email ou senha inválidos. Por favor, verifique suas credenciais.').should('be.visible'); 
   });
 });
