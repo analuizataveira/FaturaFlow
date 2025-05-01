@@ -1,39 +1,37 @@
-name: CI
+name: FaturaFlow CI Pipeline Frontend
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  cypress-run:
+  setup-backend:
     runs-on: ubuntu-latest
-
-    services:
-      xvfb:
-        image: cypress/browsers:node18.12.0-chrome107-ff107
-        options: >-
-          --entrypoint /bin/sh
+    defaults:
+      run:
+        working-directory: backend
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: "20"
+          cache: 'npm'
 
-      - name: Install root dependencies
-        run: npm ci
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: backend-modules-${{ hashFiles('backend/package-lock.json') }}
 
-      - name: Install backend dependencies
-        working-directory: ./backend
-        run: npm ci
-
-      - name: Install frontend dependencies
-        working-directory: ./frontend
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Start MongoDB (sem autenticação)
@@ -42,35 +40,104 @@ jobs:
             --name mongodb \
             -p 27017:27017 \
             mongo:6
+      
 
       - name: Wait for MongoDB
         run: |
           echo "Waiting for MongoDB to be ready..."
           npx wait-on tcp:27017 --timeout 60000
+          echo "MongoDB is ready!"
 
-      - name: Start backend
-        working-directory: ./backend
+      - name: Start backend server
         run: npm run dev &
         env:
           PORT: 3000
-          DATABASE_URL: mongodb://localhost:27017/faturaflow
+          DATABASE_URL: mongodb://root:example@localhost:27017/faturaflow?authSource=admin
 
       - name: Wait for backend
         run: |
-          echo "Waiting for backend..."
-          npx wait-on http://localhost:3000 --timeout 60000
+          echo "Waiting for backend to be ready..."
+          npx wait-on http://localhost:3000 --timeout 120000
+          echo "Backend is ready!"
 
-      - name: Start frontend
-        working-directory: ./frontend
+  build-frontend:
+    needs: setup-backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: 'npm'
+
+      - name: Cache dependencies
+        id: cache-frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  test-cypress:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Cache dependencies
+        id: cache-frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Start frontend server
         run: npm run dev &
-        env:
-          PORT: 5173
-
+      
       - name: Wait for frontend
         run: |
-          echo "Waiting for frontend..."
-          npx wait-on http://localhost:5173 --timeout 60000
+          echo "Waiting for frontend to be ready..."
+          npx wait-on http://localhost:5173 --timeout 120000
+          echo "Frontend is ready!"
 
       - name: Run Cypress tests
-        working-directory: ./frontend
-        run: npx cypress run
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: frontend
+          browser: chrome
+          spec: cypress/e2e/testelogin.cy.js
+          config: baseUrl=http://localhost:5173
+          record: false
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+          if-no-files-found: ignore
