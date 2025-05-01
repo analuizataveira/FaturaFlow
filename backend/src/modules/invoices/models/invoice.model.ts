@@ -14,7 +14,7 @@ const invoiceSchema = new Schema<Invoice>(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 export const InvoiceModel = mongoose.model<Invoice>("Invoice", invoiceSchema);

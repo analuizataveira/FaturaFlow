@@ -1,10 +1,10 @@
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 import invoicesController from "../controllers/invoices.controller";
-("../controllers/users.controller");
 
 export const invoicesRoutes = (
   fastify: FastifyInstance,
-  options: FastifyPluginOptions,
+  _options: FastifyPluginOptions,
+  // eslint-disable-next-line prettier/prettier
   done: () => void
 ) => {
   fastify.post("/", invoicesController.create);

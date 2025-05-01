@@ -54,7 +54,7 @@ const find = async (): Promise<User[]> => {
       isDeleted,
       updatedAt,
       createdAt,
-    })
+    }),
   );
 };
 
@@ -62,7 +62,7 @@ const softDelete = async (id: string): Promise<User | null> => {
   const user = await mongooseUser.findByIdAndUpdate(
     { _id: id },
     { isDeleted: true },
-    { new: true }
+    { new: true },
   );
 
   if (!user) {
