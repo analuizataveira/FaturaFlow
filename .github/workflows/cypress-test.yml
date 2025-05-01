@@ -52,7 +52,7 @@ jobs:
         run: npm run dev &
         env:
           PORT: 3000
-          DATABASE_URL: mongodb://root:example@localhost:27017/faturaflow?authSource=admin
+          DATABASE_URL: mongodb://root:example@localhost:27017/faturaflow
 
       - name: Wait for backend
         run: |
