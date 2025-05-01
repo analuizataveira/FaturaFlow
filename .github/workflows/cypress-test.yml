@@ -1,0 +1,102 @@
+name: FaturaFlow Frontend CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        id: cache-node-modules
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Cache Cypress
+        uses: actions/cache@v3
+        id: cache-cypress
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+  test-cypress:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        id: cache-node-modules
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Cache Cypress
+        uses: actions/cache@v3
+        id: cache-cypress
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+        run: npm install
+
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          working-directory: frontend
+          build: npm run build
+          start: npm start
+          wait-on: 'http://localhost:5173'
+          wait-on-timeout: 120
+          browser: chrome
+          spec: cypress/e2e/testelogin.cy.js
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
+
+      - name: Upload videos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-videos
+          path: frontend/cypress/videos
