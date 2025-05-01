@@ -16,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend/teacher-schedules
+        working-directory: backend
 
     steps:
       - uses: actions/setup-node@v3
@@ -27,7 +27,7 @@ jobs:
         id: cache
         uses: actions/cache@v3
         with:
-          path: backend/teacher-schedules/node_modules
+          path: backend/node_modules
           key: modules-${{ hashFiles('**/package.json') }}
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
@@ -37,7 +37,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: build-artifact
-          path: backend/teacher-schedules/dist
+          path: backend/dist
 
   lint-backend:
     needs: build-backend
@@ -45,7 +45,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend/teacher-schedules
+        working-directory: backend
 
     steps:
       - uses: actions/checkout@v3
@@ -53,7 +53,7 @@ jobs:
         id: cache
         uses: actions/cache@v3
         with:
-          path: backend/teacher-schedules/node_modules
+          path: backend/node_modules
           key: modules-${{ hashFiles('**/package.json') }}
       - name: Lint
         run: npm run lint
@@ -65,7 +65,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend/teacher-schedules
+        working-directory: backend
 
     steps:
       - uses: actions/checkout@v3
@@ -73,7 +73,7 @@ jobs:
         id: cache
         uses: actions/cache@v3
         with:
-          path: backend/teacher-schedules/node_modules
+          path: backend/node_modules
           key: modules-${{ hashFiles('**/package.json') }}
       - name: Tests
         run: npm run test
@@ -81,4 +81,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-report
-          path: ./backend/teacher-schedules/test-report/report.html
+          path: ./backend/test-report/report.html
