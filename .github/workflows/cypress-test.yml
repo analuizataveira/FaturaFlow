@@ -16,41 +16,50 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Set up Docker
-        run: |
-          # Remove containerd se existir para evitar conflitos
-          sudo apt-get remove -y containerd || true
-          
-          # Instala Docker oficial seguindo a documentação
-          sudo install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          sudo chmod a+r /etc/apt/keyrings/docker.gpg
-          echo \
-            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-          sudo apt-get update
-          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          
-          sudo systemctl start docker
-          sudo docker --version
-          docker compose version
 
-      - name: Start PostgreSQL container
-        run: docker compose up -d
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: 'npm'
 
-      - name: Install backend dependencies
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v3
+        with:
+          path: backend/node_modules
+          key: backend-modules-${{ hashFiles('backend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Run database migrations
-        run: npm run migration:run
+      - name: Start MongoDB
+        run: |
+          docker run -d \
+            --name mongodb \
+            -p 27017:27017 \
+            -e MONGO_INITDB_ROOT_USERNAME=root \
+            -e MONGO_INITDB_ROOT_PASSWORD=example \
+            mongo:6
+
+      - name: Wait for MongoDB
+        run: |
+          echo "Waiting for MongoDB to be ready..."
+          npx wait-on tcp:27017 --timeout 60000
+          echo "MongoDB is ready!"
 
       - name: Start backend server
         run: npm run dev &
         env:
           PORT: 3000
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/faturaflow
+          DATABASE_URL: mongodb://root:example@localhost:27017/faturaflow?authSource=admin
+
+      - name: Wait for backend
+        run: |
+          echo "Waiting for backend to be ready..."
+          npx wait-on http://localhost:3000 --timeout 120000
+          echo "Backend is ready!"
 
   build-frontend:
     needs: setup-backend
@@ -67,7 +76,15 @@ jobs:
           node-version: "20"
           cache: 'npm'
 
+      - name: Cache dependencies
+        id: cache-frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Build
@@ -82,24 +99,30 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v3
         with:
           node-version: "20"
 
+      - name: Cache dependencies
+        id: cache-frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
+        run: npm ci
+
       - name: Start frontend server
         run: npm run dev &
-        
+      
       - name: Wait for frontend
         run: |
           echo "Waiting for frontend to be ready..."
           npx wait-on http://localhost:5173 --timeout 120000
           echo "Frontend is ready!"
-
-      - name: Wait for backend
-        run: |
-          echo "Waiting for backend to be ready..."
-          npx wait-on http://localhost:3000 --timeout 120000
-          echo "Backend is ready!"
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
