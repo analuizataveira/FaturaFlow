@@ -29,12 +29,16 @@ jobs:
           path: ~/.cache/Cypress
           key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
-      - name: Install dependencies with audit fix
+      - name: Install dependencies
         run: |
           npm ci
           npm audit fix || true
-          echo "declare module 'vanta/dist/vanta.halo.min';" > src/vanta.d.ts
-          sed -i "s/const { defineConfig } = require('cypress')/import { defineConfig } from 'cypress'\\nexport default defineConfig/g" cypress.config.ts
+
+      - name: Fix Vanta.js type declaration
+        run: |
+          mkdir -p src/types
+          echo "declare module 'vanta/dist/vanta.halo.min';" > src/types/vanta.d.ts
+          echo "Added Vanta.js type declaration"
 
       - name: Build
         run: npm run build
@@ -69,6 +73,8 @@ jobs:
           wait-on-timeout: 120
           browser: chrome
           spec: cypress/e2e/testelogin.cy.js
+          record: false
+          config: video=true,screenshotOnRunFailure=true
 
       - name: Upload test results
         if: always()
@@ -76,9 +82,12 @@ jobs:
         with:
           name: cypress-screenshots
           path: frontend/cypress/screenshots
+          if-no-files-found: warn
+
       - name: Upload videos
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cypress-videos
           path: frontend/cypress/videos
+          if-no-files-found: warn
