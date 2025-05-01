@@ -1,9 +1,9 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 const createSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email format"),
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
   password: z.string(),
-  name: z.string().min(1, "Name is required"),
+  name: z.string().min(1, 'Name is required'),
 });
 
 export function createUserDTO(user: unknown) {

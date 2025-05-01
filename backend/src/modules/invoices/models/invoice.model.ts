@@ -1,5 +1,5 @@
-import mongoose, { Schema } from "mongoose";
-import { Invoice } from "./invoice.type";
+import mongoose, { Schema } from 'mongoose';
+import { Invoice } from './invoice.type';
 
 const invoiceSchema = new Schema<Invoice>(
   {
@@ -17,4 +17,4 @@ const invoiceSchema = new Schema<Invoice>(
   },
 );
 
-export const InvoiceModel = mongoose.model<Invoice>("Invoice", invoiceSchema);
+export const InvoiceModel = mongoose.model<Invoice>('Invoice', invoiceSchema);

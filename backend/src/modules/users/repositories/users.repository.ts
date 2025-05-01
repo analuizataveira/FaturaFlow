@@ -1,11 +1,7 @@
-import { User } from "../models/user.type";
-import { mongooseUser } from "../models/user.model";
+import { User } from '../models/user.type';
+import { mongooseUser } from '../models/user.model';
 
-const create = async (user: {
-  email: string;
-  password: string;
-  name: string;
-}): Promise<User> => {
+const create = async (user: { email: string; password: string; name: string }): Promise<User> => {
   const createdUser = await mongooseUser.create(user);
   return {
     id: String(createdUser._id),
@@ -45,17 +41,15 @@ const findByEmail = async (email: string): Promise<User | null> => {
 const find = async (): Promise<User[]> => {
   const users = await mongooseUser.find();
 
-  return users.map(
-    ({ _id, email, name, password, isDeleted, updatedAt, createdAt }) => ({
-      id: String(_id),
-      email,
-      name,
-      password,
-      isDeleted,
-      updatedAt,
-      createdAt,
-    }),
-  );
+  return users.map(({ _id, email, name, password, isDeleted, updatedAt, createdAt }) => ({
+    id: String(_id),
+    email,
+    name,
+    password,
+    isDeleted,
+    updatedAt,
+    createdAt,
+  }));
 };
 
 const softDelete = async (id: string): Promise<User | null> => {

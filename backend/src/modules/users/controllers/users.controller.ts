@@ -1,8 +1,8 @@
-import { FastifyReply, FastifyRequest } from "fastify";
-import usersService from "../services/users.service";
-import { createUserDTO } from "../dtos/create.dto";
-import { mongooseIdDTO } from "../../../shared/dtos/mongo-id.dto";
-import { loginDTO } from "../dtos/login.dto";
+import { FastifyReply, FastifyRequest } from 'fastify';
+import usersService from '../services/users.service';
+import { createUserDTO } from '../dtos/create.dto';
+import { mongooseIdDTO } from '../../../shared/dtos/mongo-id.dto';
+import { loginDTO } from '../dtos/login.dto';
 
 const login = async (request: FastifyRequest, reply: FastifyReply) => {
   const { body } = request;
@@ -20,7 +20,7 @@ const create = async (request: FastifyRequest, reply: FastifyReply) => {
   const result = await usersService.create(userData);
 
   if (!result) {
-    return reply.status(400).send({ msg: "Email already exists" });
+    return reply.status(400).send({ msg: 'Email already exists' });
   }
 
   return reply.status(201).send(result);

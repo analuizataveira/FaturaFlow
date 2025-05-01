@@ -1,7 +1,7 @@
-import * as z from "zod";
+import * as z from 'zod';
 
 const loginSchema = z.object({
-  email: z.string().min(1, "Email is required").email("Invalid email format"),
+  email: z.string().min(1, 'Email is required').email('Invalid email format'),
   password: z.string(),
 });
 
