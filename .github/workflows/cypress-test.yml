@@ -34,11 +34,13 @@ jobs:
         if: steps.cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      - name: Start MongoDB (sem autenticação)
+      - name: Start MongoDB
         run: |
           docker run -d \
             --name mongodb \
             -p 27017:27017 \
+            -e MONGO_INITDB_ROOT_USERNAME=admin \
+            -e MONGO_INITDB_ROOT_PASSWORD=admin \
             mongo:6
       
 
@@ -52,7 +54,7 @@ jobs:
         run: npm run dev &
         env:
           PORT: 3000
-          DATABASE_URL: mongodb://root:example@localhost:27017/faturaflow
+          MONGO:  mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin
 
       - name: Wait for backend
         run: |
