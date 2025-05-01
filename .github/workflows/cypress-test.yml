@@ -56,11 +56,6 @@ jobs:
           PORT: 3000
           MONGO:  mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin
 
-      - name: Wait for backend
-        run: |
-          echo "Waiting for backend to be ready..."
-          npx wait-on http://localhost:3000 --timeout 120000
-          echo "Backend is ready!"
 
   build-frontend:
     needs: setup-backend
