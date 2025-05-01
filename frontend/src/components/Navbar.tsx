@@ -2,15 +2,15 @@ import { Disclosure, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/r
 import { useEffect, useState } from 'react';
 import { IoColorPaletteOutline } from "react-icons/io5";
 import { NavLink } from 'react-router';
+import { useNavigate } from 'react-router-dom';
+
 
 
 const user = {
-    name: 'Tom Cook',
-    email: 'tom@example.com',
     imageUrl: 'https://static.poder360.com.br/2019/04/foto-oficial-Bolsonaro-774x644.png'
 };
 const navigation = [
-    { name: 'Dashboard', href: '/dashboard' },
+    { name: 'Menu', href: '/menu' },
     { name: 'Histórico', href: '/history' },
 ];
 const userNavigation = [
@@ -21,19 +21,28 @@ const userNavigation = [
 const themes = ["light", "dark", "dracula", "corporate", "retro", "valentine", "halloween", "lofi", "black", "winter"];
 
 type NavBarProps = {
-    page: string;  
+    page: string;
 }
 
-export default function NavBar (navbarProps: NavBarProps) {
+
+
+export default function NavBar(navbarProps: NavBarProps) {
     const [theme, setTheme] = useState('light');
     const currentPage = navbarProps.page;
 
-  
-    const toggleTheme = (selectedTheme: string) => {
+    const navigate = useNavigate();
+
+     const toggleTheme = (selectedTheme: string) => {
         setTheme(selectedTheme);
         document.documentElement.setAttribute('data-theme', selectedTheme);
         localStorage.setItem('theme', selectedTheme);
     };
+
+    const handleLogout = () => {
+        localStorage.removeItem("session"); // Remove a sessão
+        navigate("/login"); // Redireciona para login
+    };
+
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -93,14 +102,24 @@ export default function NavBar (navbarProps: NavBarProps) {
                                     >
                                         {userNavigation.map((item) => (
                                             <MenuItem key={item.name}>
-                                                <a
-                                                    href={item.href}
-                                                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                >
-                                                    {item.name}
-                                                </a>
+                                                {item.name === 'Sign out' ? (
+                                                    <button
+                                                        onClick={handleLogout}
+                                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                    >
+                                                        {item.name}
+                                                    </button>
+                                                ) : (
+                                                    <a
+                                                        href={item.href}
+                                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                                    >
+                                                        {item.name}
+                                                    </a>
+                                                )}
                                             </MenuItem>
                                         ))}
+
                                     </MenuItems>
                                 </Menu>
                             </div>

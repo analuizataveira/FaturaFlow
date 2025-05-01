@@ -1,4 +1,3 @@
-import { randomInt } from "crypto";
 import usersRepository from "../repositories/users.repository";
 import usersService from "./users.service";
 
@@ -11,7 +10,7 @@ const mockerUserRepository = usersRepository as jest.Mocked<
 describe("Users Service", () => {
   it("should create a user", async () => {
     const mockedUser = {
-      id: randomInt(20),
+      id: "2",
       name: "Jeca",
       email: "jeca@gmail.com",
       password: "teste123",
@@ -23,7 +22,8 @@ describe("Users Service", () => {
 
     expect(result).toStrictEqual({
       ...mockedUser,
-      id: expect.any(Number),
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      id: expect.any(String),
     });
   });
 
@@ -37,11 +37,10 @@ describe("Users Service", () => {
 
     mockerUserRepository.findByEmail.mockResolvedValueOnce(mockedUser);
 
-    const result = await usersService.create(mockedUser);
-
-    expect(result).toStrictEqual({
-      msg: "User already exists",
-    });
+    await expect(usersService.create(mockedUser)).rejects.toThrow(
+      // eslint-disable-next-line prettier/prettier
+      "Email already exists"
+    );
   });
 
   it("should find a user by id", async () => {
@@ -58,6 +57,7 @@ describe("Users Service", () => {
 
     expect(result).toStrictEqual({
       ...mockedUser,
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       id: expect.any(String),
     });
   });
@@ -65,24 +65,22 @@ describe("Users Service", () => {
   it("should throw an error if users doesnt exists", async () => {
     mockerUserRepository.findByEmail.mockResolvedValueOnce(null);
 
-    const result = await usersService.findById("2");
-
-    expect(result).toStrictEqual({
-      msg: "User not found",
-    });
+    await expect(usersService.findById("2")).rejects.toThrow("User not found");
   });
 
   it("should find all users", async () => {
     const mockedUsers = [
       {
-        id: 2,
+        id: "2",
         name: "Jeca",
         email: "jeca@gmail.com",
+        password: "crypto",
       },
       {
-        id: 2,
+        id: "2",
         name: "Jeca",
         email: "jeca@gmail.com",
+        password: "crypto",
       },
     ];
 

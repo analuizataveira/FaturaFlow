@@ -1,70 +1,109 @@
+import { useState } from "react";
 import { useNavigate } from "react-router";
+import { userLogin } from "../services/UserService";
+import VantaHalo from "../VantaHalo";
+
+export default function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
 
-export default function Login() {    
-    const navigate = useNavigate();
+  const submitForm = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-    const submitForm = (event: React.FormEvent) => {
-      event.preventDefault();
-      navigate('/dashboard');
-    };
-  
+    try {
+      const response = await userLogin(email, password);
+
+      if (response.token) {
+        // Armazena o token e dados básicos do usuário
+        localStorage.setItem("session", JSON.stringify({
+          token: response.token,
+          id: response.id
+        }));
+        navigate("/menu");
+      } else {
+        throw new Error("Credenciais inválidas");
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Erro ao fazer login");
+      } else {
+        setError("Ocorreu um erro desconhecido");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="card w-96  shadow-xl bg-slate-900 bg-opacity-10">
-        <div className="card-body">
-          <div className="card-actions justify-center">
+    <div className="flex h-screen w-full">
+      <div className="w-1/2 h-full relative">
+        <div className="absolute inset-0 overflow-hidden">
+          <VantaHalo />
+        </div>
+      </div>
 
-            <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-              <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-                <form onSubmit={submitForm} method="POST" className="space-y-6">
-                  <div>
-                    <label htmlFor="email" className="block text-sm/6 font-medium">
-                      Usuário
-                    </label>
-                    <div className="mt-2">
-                      <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        required
-                        autoComplete="email"
-                        className="block w-full rounded-md  px-3 py-1.5 text-base outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-gray-950 sm:text-sm/6"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="password" className="block text-sm/6 font-medium">
-                        Senha
-                      </label>
-                    </div>
-                    <div className="mt-2">
-                      <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        required
-                        autoComplete="current-password"
-                        className="block w-full rounded-md px-3 py-1.5 text-base  outline outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-slate-950 sm:text-sm/6"
-                      />
-                    </div>
-                  </div>
+      <div className="w-1/2 flex items-center justify-center bg-white">
+        <div className="w-full max-w-md p-8">
+          <h2 className="text-2xl font-bold text-center mb-6">Login</h2>
 
-                  <div>
-                    <button
-                      type="submit"
-                      className="flex w-full justify-center rounded-md bg-gray-700 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                    >
-                      Entrar
-                    </button>
-                  </div>
-                </form>
-              </div>
+          {error && (
+            <div className="mb-4 p-2 bg-red-100 text-red-700 rounded text-sm text-center">
+              {error}
             </div>
-          </div>
+          )}
+
+          <form onSubmit={submitForm} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium mb-1">
+                E-mail
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="block w-full bg-slate-50 border border-slate-600 focus:border-slate-900 rounded-md px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-1">
+                Senha
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="block w-full bg-slate-50 border border-slate-600 focus:border-slate-900 rounded-md px-3 py-2"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`w-full py-2 px-4 text-white font-medium rounded-md transition-colors ${isLoading
+                ? "bg-slate-500 cursor-not-allowed"
+                : "bg-slate-900 hover:bg-slate-700"
+                }`}
+            >
+              {isLoading ? "Carregando..." : "Entrar"}
+            </button>
+          </form>
         </div>
       </div>
     </div>
-  )
+  );
 }

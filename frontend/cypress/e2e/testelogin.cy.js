@@ -31,7 +31,7 @@ describe ('App teste',()=>{
         cy.get('#email').type('usuario@dominio.com');
         cy.get('#password').type('senha123');
         cy.get('button').contains('Entrar').click();
-        cy.url().should('eq', 'http://localhost:5173/dashboard');
+        cy.url().should('eq', 'http://localhost:5173/menu');
       });
 
 });
