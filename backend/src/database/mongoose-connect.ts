@@ -1,19 +1,18 @@
-import { connection, connections, connect } from "mongoose";
+import { connection, connections, connect } from 'mongoose';
 
 const mongo: string =
-  process.env.MONGO ||
-  "mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin";
+  process.env.MONGO || 'mongodb://admin:admin@localhost:27017/faturaflow?authSource=admin';
 
 export async function mongoConnect() {
   connection
-    .on("error", (error) => {
-      console.log("ERROR: Connection to MongoDB failed", error);
+    .on('error', (error) => {
+      console.log('ERROR: Connection to MongoDB failed', error);
     })
-    .on("close", () => {
-      console.log("Connection to MongoDB ended");
+    .on('close', () => {
+      console.log('Connection to MongoDB ended');
       process.exit(1);
     })
-    .once("open", () => {
+    .once('open', () => {
       const infos = connections;
       infos.map((info) =>
         console.log(

@@ -1,7 +1,8 @@
-import { FastifyReply, FastifyRequest } from "fastify";
-import { mongooseIdDTO } from "../../../shared/dtos/mongo-id.dto";
-import invoicesService from "../services/invoices.service";
-import { createInvoiceDTO } from "../dtos/create.dto";
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { mongooseIdDTO } from '../../../shared/dtos/mongo-id.dto';
+import invoicesService from '../services/invoices.service';
+import { createInvoiceDTO } from '../dtos/create.dto';
+import { validateCsvDTO } from '../dtos/upload-csv.dto';
 
 const create = async (request: FastifyRequest, reply: FastifyReply) => {
   const { body } = request;
@@ -52,7 +53,6 @@ const deleteInvoice = async (request: FastifyRequest, reply: FastifyReply) => {
   return reply.status(204).send();
 };
 
-// Deletar tudo pelo UserId
 const deleteAll = async (request: FastifyRequest, reply: FastifyReply) => {
   const { params } = request;
   const id = mongooseIdDTO(params);
@@ -62,6 +62,46 @@ const deleteAll = async (request: FastifyRequest, reply: FastifyReply) => {
   return reply.status(204).send();
 };
 
+const uploadCsv = async (
+  request: FastifyRequest<{
+    Params: { id: string };
+  }>,
+  reply: FastifyReply,
+) => {
+  const { params } = request;
+  const userId = mongooseIdDTO(params);
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+  if (!request.isMultipart()) {
+    return reply.status(400).send({ error: 'The request must be multipart/form-data' });
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({ error: 'No file provided' });
+    }
+
+    const validation = validateCsvDTO(data);
+    if (!validation.isValid) {
+      return reply.status(400).send({ error: validation.message });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    const buffer = await data.toBuffer();
+    const result = await invoicesService.uploadCsv(buffer, userId);
+
+    return reply.status(200).send(result);
+  } catch (err) {
+    return reply.status(400).send({
+      error: 'Error processing the file',
+      message: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+};
+
 export default {
   create,
   findAll,
@@ -69,4 +109,5 @@ export default {
   update,
   deleteInvoice,
   deleteAll,
+  uploadCsv,
 };
