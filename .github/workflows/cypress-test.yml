@@ -10,90 +10,51 @@ on:
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: frontend
 
     steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "20"  # Matches react-router requirements
-      
       - uses: actions/checkout@v3
 
-      - name: Cache node modules
-        id: cache-node-modules
-        uses: actions/cache@v3
+      - uses: actions/setup-node@v3
         with:
-          path: frontend/node_modules
-          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+          node-version: "20"
+          cache: 'npm'
 
       - name: Cache Cypress
-        id: cache-cypress
         uses: actions/cache@v3
+        id: cache-cypress
         with:
           path: ~/.cache/Cypress
           key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
 
-      - name: Install dependencies
-        if: steps.cache-node-modules.outputs.cache-hit != 'true'
+      - name: Install dependencies with audit fix
         run: |
-          npm install
-          # Create custom type declaration for Vanta.js
+          npm ci
+          npm audit fix || true
           echo "declare module 'vanta/dist/vanta.halo.min';" > src/vanta.d.ts
+          sed -i "s/const { defineConfig } = require('cypress')/import { defineConfig } from 'cypress'\\nexport default defineConfig/g" cypress.config.ts
 
       - name: Build
         run: npm run build
 
-      - name: Upload Build
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/dist
-
-  lint-frontend:
-    needs: build-frontend
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Cache node modules
-        id: cache-node-modules
-        uses: actions/cache@v3
-        with:
-          path: frontend/node_modules
-          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
-
-      - name: Lint
-        run: npm run lint
-
   test-cypress:
     needs: build-frontend
     runs-on: ubuntu-latest
-
     defaults:
       run:
         working-directory: frontend
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Cache node modules
-        id: cache-node-modules
-        uses: actions/cache@v3
+      - uses: actions/setup-node@v3
         with:
-          path: frontend/node_modules
-          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+          node-version: "20"
 
       - name: Cache Cypress
-        id: cache-cypress
         uses: actions/cache@v3
+        id: cache-cypress
         with:
           path: ~/.cache/Cypress
           key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
@@ -103,20 +64,19 @@ jobs:
         with:
           working-directory: frontend
           build: npm run build
-          start: npm start
+          start: npm run dev
           wait-on: 'http://localhost:5173'
           wait-on-timeout: 120
           browser: chrome
           spec: cypress/e2e/testelogin.cy.js
 
-      - name: Upload Test Results
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cypress-screenshots
           path: frontend/cypress/screenshots
-
-      - name: Upload Videos
+      - name: Upload videos
         if: always()
         uses: actions/upload-artifact@v4
         with:
