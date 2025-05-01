@@ -123,11 +123,9 @@ describe("Users Service", () => {
 
     mockerUserRepository.findByEmail.mockResolvedValueOnce(null);
 
-    const result = await usersService.softDelete(mockedUser.id);
-
-    expect(result).toStrictEqual({
-      msg: "User not found",
-    });
+    await expect(usersService.softDelete(mockedUser.id)).rejects.toThrow(
+      // eslint-disable-next-line prettier/prettier
+      "User not found"
+    );
   });
-
 });
