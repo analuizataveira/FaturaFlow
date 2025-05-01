@@ -126,7 +126,7 @@ jobs:
           spec: cypress/e2e/testelogin.cy.js
           config: baseUrl=http://localhost:5173
           record: false
-          config-file: cypress.config.js
+          config-file: cypress.config.ts
           env: language=pt-BR
         env:
           LANGUAGE: "pt_BR:pt"
