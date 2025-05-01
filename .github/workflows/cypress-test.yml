@@ -22,23 +22,16 @@ jobs:
           node-version: "20"
           cache: 'npm'
 
-      - name: Cache Cypress
-        uses: actions/cache@v3
-        id: cache-cypress
-        with:
-          path: ~/.cache/Cypress
-          key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+      - name: Create Vanta.js type declaration
+        run: |
+          mkdir -p src/@types
+          echo "declare module 'vanta/dist/vanta.halo.min';" > src/@types/vanta.d.ts
+          # Update tsconfig.json
+          npm install -g jq
+          jq '.compilerOptions += {"typeRoots": ["./node_modules/@types", "./src/@types"], "noImplicitAny": false}' tsconfig.json > tmp.json && mv tmp.json tsconfig.json
 
       - name: Install dependencies
-        run: |
-          npm ci
-          npm audit fix || true
-
-      - name: Fix Vanta.js type declaration
-        run: |
-          mkdir -p src/types
-          echo "declare module 'vanta/dist/vanta.halo.min';" > src/types/vanta.d.ts
-          echo "Added Vanta.js type declaration"
+        run: npm ci
 
       - name: Build
         run: npm run build
@@ -56,13 +49,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Cache Cypress
-        uses: actions/cache@v3
-        id: cache-cypress
-        with:
-          path: ~/.cache/Cypress
-          key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
-
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
         with:
@@ -74,20 +60,13 @@ jobs:
           browser: chrome
           spec: cypress/e2e/testelogin.cy.js
           record: false
-          config: video=true,screenshotOnRunFailure=true
 
-      - name: Upload test results
+      - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cypress-screenshots
-          path: frontend/cypress/screenshots
-          if-no-files-found: warn
-
-      - name: Upload videos
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-videos
-          path: frontend/cypress/videos
-          if-no-files-found: warn
+          name: cypress-artifacts
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+          if-no-files-found: ignore

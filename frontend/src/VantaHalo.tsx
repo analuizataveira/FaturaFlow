@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
-import HALO from "vanta/dist/vanta.halo.min";
+import * as HALO from 'vanta/dist/vanta.halo.min';
 
 export default function VantaHalo() {
   const vantaRef = useRef<HTMLDivElement>(null);
