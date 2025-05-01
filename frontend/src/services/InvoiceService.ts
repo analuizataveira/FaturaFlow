@@ -116,7 +116,9 @@ export const deleteInvoice = async (id: string): Promise<void> => {
       },
       body: JSON.stringify({}), // Envia objeto vazio
     });
-
+    if (!response.ok) {
+      throw new Error("Falha ao deletar fatura");
+    }
     // ... resto do código
   } catch (error) {
     // ... tratamento de erro
