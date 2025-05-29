@@ -94,6 +94,16 @@ export default function Login() {
             {isLoading ? "Carregando..." : "Entrar"}
           </button>
         </form>
+
+        {/* Botão de criar usuário adicionado aqui */}
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => navigate("/createuser")}
+            className="text-slate-900 hover:text-slate-700 font-medium text-sm underline"
+          >
+            Criar conta
+          </button>
+        </div>
       </div>
     </div>
   );

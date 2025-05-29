@@ -14,7 +14,6 @@ const navigation = [
     { name: 'Histórico', href: '/history' },
 ];
 const userNavigation = [
-    { name: 'Criar Usuário', href: '/createuser' },
     { name: 'Sign out', href: '/login' },
 ];
 

@@ -1,82 +1,130 @@
 'use client'
 
 import { useState } from 'react';
-import NavBar from '../components/Navbar.tsx';
-
-type User = {
-  id: number;
-  name: string;
-  email: string;
-  password: string;
-};
+import { useNavigate } from 'react-router';
+import { User } from '../models/User';
+import { createUser } from '../services/UserService';
 
 export default function UserForm() {
-  const [user, setUser] = useState<User>({
-    id: Date.now(),
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User>({ 
     name: '',
     email: '',
     password: '',
   });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Usuário criado:', user);
-    // Aqui pode ser feita a requisição para o backend
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const response = await createUser(user);
+      
+      if (response) {
+        // Redireciona para login com estado para mostrar mensagem de sucesso
+        navigate('/login', { state: { userCreated: true } });
+      } else {
+        throw new Error('Erro ao criar usuário');
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Erro ao criar usuário');
+      } else {
+        setError('Ocorreu um erro desconhecido');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div>
-      <NavBar page={""} />
       <div className="isolate bg-white px-6 py-24 sm:py-32 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-balance text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">Criar Usuário</h2>
+          <h2 className="text-balance text-4xl font-semibold tracking-tight text-gray-900 sm:text-5xl">
+            Criar Usuário
+          </h2>
         </div>
+        
+        {error && (
+          <div className="mx-auto mt-8 max-w-xl p-4 bg-red-100 text-red-700 rounded-md text-sm text-center">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="mx-auto mt-16 max-w-xl sm:mt-20">
           <div className="grid grid-cols-1 gap-x-8 gap-y-6">
             <div>
-              <label htmlFor="name" className="block text-sm font-semibold text-gray-900">Nome</label>
+              <label htmlFor="name" className="block text-sm font-semibold text-gray-900">
+                Nome completo
+              </label>
               <input
                 id="name"
                 name="name"
                 type="text"
                 value={user.name}
                 onChange={handleChange}
-                className="block w-full rounded-md px-3.5 py-2 text-base text-gray-900 outline outline-1 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600"
+                required
+                minLength={3}
+                className="block w-full rounded-md px-3.5 py-2 text-gray-900 outline outline-1 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600"
               />
             </div>
             <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-gray-900">Email</label>
+              <label htmlFor="email" className="block text-sm font-semibold text-gray-900">
+                E-mail
+              </label>
               <input
                 id="email"
                 name="email"
                 type="email"
                 value={user.email}
                 onChange={handleChange}
-                className="block w-full rounded-md px-3.5 py-2 text-base text-gray-900 outline outline-1 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600"
+                required
+                className="block w-full rounded-md px-3.5 py-2 text-gray-900 outline outline-1 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600"
               />
             </div>
             <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-gray-900">Senha</label>
+              <label htmlFor="password" className="block text-sm font-semibold text-gray-900">
+                Senha (mínimo 6 caracteres)
+              </label>
               <input
                 id="password"
                 name="password"
                 type="password"
                 value={user.password}
                 onChange={handleChange}
-                className="block w-full rounded-md px-3.5 py-2 text-base text-gray-900 outline outline-1 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600"
+                required
+                minLength={6}
+                className="block w-full rounded-md px-3.5 py-2 text-gray-900 outline outline-1 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600"
               />
             </div>
           </div>
-          <div className="mt-10">
+          <div className="mt-10 flex flex-col gap-4">
             <button
               type="submit"
-              className="block w-full rounded-md bg-indigo-600 px-3.5 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600"
+              disabled={isLoading}
+              className={`w-full rounded-md px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 ${
+                isLoading
+                  ? 'bg-indigo-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-500'
+              }`}
             >
-              Criar
+              {isLoading ? 'Criando conta...' : 'Criar conta'}
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+            >
+              Já tem uma conta? Faça login
             </button>
           </div>
         </form>

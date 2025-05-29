@@ -21,9 +21,7 @@ createRoot(document.getElementById('root')!).render(
               </ProtectedRoute>
             } />
             <Route path="/createuser" element={
-              <ProtectedRoute>
                 <UserForm />
-              </ProtectedRoute>
             } />
             <Route path="/invoicesform" element={
               <ProtectedRoute>
