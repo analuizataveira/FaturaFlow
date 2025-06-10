@@ -5,11 +5,12 @@ import { Invoice } from '../../models/Invoice';
 import { createInvoice, getCurrentDateFormatted } from '../../services/InvoiceService';
 import AnalysisResults from './AnalysisResults';
 import InvoicesList from './InvoicesList';
-
+import CsvUploader from '../../components/CSVUploader';
 
 const InvoiceForm = () => {
   const [invoicesList, setInvoicesList] = useState<Invoice[]>([]);
   const [refreshTrigger, setRefreshTrigger] = useState(false);
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
 
   const [invoice, setInvoice] = useState<Invoice>({
     date: getCurrentDateFormatted(),
@@ -30,7 +31,13 @@ const InvoiceForm = () => {
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   useEffect(() => {
-    setShowHelpModal(true);
+    // Verifica se o usuário já viu o guia de ajuda
+    const hasSeenHelp = localStorage.getItem('hasSeenInvoicesHelp');
+
+    if (!hasSeenHelp) {
+      setShowHelpModal(true);
+    }
+
     if (user) {
       setInvoice(prev => ({
         ...prev,
@@ -39,12 +46,11 @@ const InvoiceForm = () => {
     }
   }, [user]);
 
-
   const handleCloseHelp = () => {
     setShowHelpModal(false);
-    localStorage.setItem('hasSeenCostsHelp', 'true');
+    // Marca que o usuário já viu o guia de ajuda
+    localStorage.setItem('hasSeenInvoicesHelp', 'true');
   };
-
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -54,7 +60,11 @@ const InvoiceForm = () => {
     }));
   };
 
-  // Modifique a função handleSubmit
+  const handleCsvUploadSuccess = () => {
+    setRefreshTrigger(prev => !prev);
+    setShowCsvUpload(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -69,10 +79,8 @@ const InvoiceForm = () => {
         userId: user?.id || ''
       });
 
-      // Atualiza o trigger para forçar o refresh
       setRefreshTrigger(prev => !prev);
 
-      // Reseta o formulário
       setInvoice({
         _id: '',
         date: getCurrentDateFormatted(),
@@ -93,14 +101,15 @@ const InvoiceForm = () => {
 
   return (
     <div>
-      <NavBar page="" />
-
+      <NavBar/>
       {showAnalysis && (
         <AnalysisResults
           transactions={invoicesList}
           onClose={() => setShowAnalysis(false)}
         />
       )}
+
+      {/* Modal de Ajuda */}
       <Modal
         isOpen={showHelpModal}
         onCloseClick={handleCloseHelp}
@@ -111,7 +120,7 @@ const InvoiceForm = () => {
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Guia de Ajuda
+              Guia de Ajuda - Despesas
             </h2>
           </div>
 
@@ -143,48 +152,86 @@ const InvoiceForm = () => {
                     <strong className="text-indigo-700">Data precisa</strong> ajuda na organização mensal/anual.
                   </div>
                 </li>
+                <li className="flex items-start gap-3">
+                  <span className="bg-green-100 text-green-800 rounded-full p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <div>
+                    <strong className="text-green-700">Use o Upload CSV</strong> para adicionar múltiplas despesas de uma vez!
+                  </div>
+                </li>
               </ul>
             </div>
 
             <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-100">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">Dicas para categorização</h3>
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">Categorias disponíveis</h3>
               <div className="grid grid-cols-2 gap-2 mt-3">
-                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                  Alimentação
-                </span>
-                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                  </svg>
-                  Transporte
-                </span>
+                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm">Alimentação</span>
+                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm">Transporte</span>
+                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm">Saúde</span>
+                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm">Lazer</span>
+                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm">Educação</span>
+                <span className="bg-blue-50 text-blue-800 px-3 py-1 rounded-full text-sm">Serviços</span>
               </div>
             </div>
 
             <div className="bg-white p-4 rounded-lg shadow-sm border border-green-100">
-              <h3 className="text-lg font-semibold text-green-800 mb-2">Análise de gastos</h3>
+              <h3 className="text-lg font-semibold text-green-800 mb-2">💡 Dica importante</h3>
               <p className="text-gray-700">
-                Após registrar várias despesas, use o botão <strong>"Gerar análise"</strong> para gerar relatórios e gráficos que ajudam você a entender seus padrões de gastos.
+                Este guia só aparece na primeira vez. Você pode sempre acessá-lo novamente clicando no botão <strong>"Ajuda"</strong> no topo da página.
               </p>
             </div>
           </div>
+
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={handleCloseHelp}
+              className="btn btn-primary"
+            >
+              Entendi! Não mostrar novamente
+            </button>
+          </div>
         </div>
       </Modal>
+
+      {/* Modal para Upload CSV */}
+      <Modal
+        isOpen={showCsvUpload}
+        onCloseClick={() => setShowCsvUpload(false)}
+      >
+        <CsvUploader
+          userId={user?.id || ''}
+          onUploadSuccess={handleCsvUploadSuccess}
+        />
+      </Modal>
+
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold">Registrar Despesa</h1>
-          <button
-            className="btn btn-ghost text-indigo-600 hover:bg-indigo-50"
-            onClick={() => setShowHelpModal(true)}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Ajuda
-          </button>
+          <div className="flex gap-2">
+            {/* Botão para Upload CSV */}
+            <button
+              className="btn btn-outline btn-primary"
+              onClick={() => setShowCsvUpload(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              Upload CSV
+            </button>
+
+            <button
+              className="btn btn-ghost text-indigo-600 hover:bg-indigo-50"
+              onClick={() => setShowHelpModal(true)}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Ajuda
+            </button>
+          </div>
         </div>
 
         {errorMessage && (
@@ -198,6 +245,7 @@ const InvoiceForm = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* ... resto do formulário permanece igual ... */}
             <div>
               <label className="block mb-1">Data</label>
               <input
@@ -240,6 +288,12 @@ const InvoiceForm = () => {
                 <option value="Transporte">Transporte</option>
                 <option value="Educação">Educação</option>
                 <option value="Lazer">Lazer</option>
+                <option value="Saúde">Saúde</option>
+                <option value="Serviços">Serviços</option>
+                <option value="Educação">Educação</option>
+                <option value="Vestuário">Vestuário</option>
+                <option value="Moradia">Moradia</option>
+                <option value="Bancos e Finanças">Bancos e Finanças</option>
               </select>
             </div>
             <div>
@@ -259,6 +313,7 @@ const InvoiceForm = () => {
             </div>
             <button type="submit" className="btn btn-primary">Adicionar</button>
           </form>
+
           <InvoicesList
             refreshTrigger={refreshTrigger}
             onInvoiceDelete={(id) => {
@@ -266,7 +321,6 @@ const InvoiceForm = () => {
               setRefreshTrigger(prev => !prev);
             }}
           />
-
         </div>
       </div>
     </div>

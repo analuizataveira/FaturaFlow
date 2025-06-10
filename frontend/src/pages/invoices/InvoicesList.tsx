@@ -85,7 +85,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
     }
 
     try {
-      const formattedDate = editFormData.date 
+      const formattedDate = editFormData.date
         ? new Date(editFormData.date).toISOString().split('T')[0]
         : editingInvoice.date;
 
@@ -98,7 +98,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
 
       await editInvoice(updatedInvoice);
 
-      setInvoices(prev => prev.map(inv => 
+      setInvoices(prev => prev.map(inv =>
         inv._id === editingInvoice._id ? updatedInvoice : inv
       ));
 
@@ -134,7 +134,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
           </svg>
           <span>{error}</span>
         </div>
-        <button 
+        <button
           className="btn btn-sm btn-ghost"
           onClick={() => setError(null)}
         >
@@ -179,7 +179,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
                     <input
                       type="date"
                       value={editFormData.date || selectedInvoice.date}
-                      onChange={(e) => setEditFormData({...editFormData, date: e.target.value})}
+                      onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
                       className="input input-bordered w-full"
                     />
                   </div>
@@ -190,7 +190,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
                     <input
                       type="text"
                       value={editFormData.description || selectedInvoice.description}
-                      onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                      onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
                       className="input input-bordered w-full"
                     />
                   </div>
@@ -202,7 +202,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
                       type="number"
                       step="0.01"
                       value={editFormData.value || selectedInvoice.value}
-                      onChange={(e) => setEditFormData({...editFormData, value: parseFloat(e.target.value) || 0})}
+                      onChange={(e) => setEditFormData({ ...editFormData, value: parseFloat(e.target.value) || 0 })}
                       className="input input-bordered w-full"
                     />
                   </div>
@@ -212,15 +212,20 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
                     </label>
                     <select
                       value={editFormData.category || selectedInvoice.category}
-                      onChange={(e) => setEditFormData({...editFormData, category: e.target.value})}
+                      onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
                       className="select select-bordered w-full"
                     >
+                      <option value="">Selecione</option>
                       <option value="Alimentação">Alimentação</option>
                       <option value="Transporte">Transporte</option>
-                      <option value="Moradia">Moradia</option>
-                      <option value="Lazer">Lazer</option>
                       <option value="Educação">Educação</option>
+                      <option value="Lazer">Lazer</option>
                       <option value="Saúde">Saúde</option>
+                      <option value="Serviços">Serviços</option>
+                      <option value="Educação">Educação</option>
+                      <option value="Vestuário">Vestuário</option>
+                      <option value="Moradia">Moradia</option>
+                      <option value="Bancos e Finanças">Bancos e Finanças</option>
                       <option value="Outros">Outros</option>
                     </select>
                   </div>
@@ -230,7 +235,7 @@ const InvoicesList = ({ refreshTrigger, onInvoiceDelete, onInvoiceEdit }: Invoic
                     </label>
                     <select
                       value={editFormData.payment || selectedInvoice.payment}
-                      onChange={(e) => setEditFormData({...editFormData, payment: e.target.value})}
+                      onChange={(e) => setEditFormData({ ...editFormData, payment: e.target.value })}
                       className="select select-bordered w-full"
                     >
                       <option value="Dinheiro">Dinheiro</option>

@@ -1,33 +1,19 @@
-import { Disclosure, Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
+import { Disclosure } from '@headlessui/react';
 import { useEffect, useState } from 'react';
 import { IoColorPaletteOutline } from "react-icons/io5";
 import { NavLink } from 'react-router';
 import { useNavigate } from 'react-router-dom';
 
-
-
-const user = {
-    imageUrl: 'https://static.poder360.com.br/2019/04/foto-oficial-Bolsonaro-774x644.png'
-};
 const navigation = [
     { name: 'Menu', href: '/menu' },
     { name: 'Histórico', href: '/history' },
-];
-const userNavigation = [
-    { name: 'Sign out', href: '/login' },
+    { name: 'Lista', href: '/invoicesform'}
 ];
 
 const themes = ["light", "dark", "dracula", "corporate", "retro", "valentine", "halloween", "lofi", "black", "winter"];
 
-type NavBarProps = {
-    page: string;
-}
-
-
-
-export default function NavBar(navbarProps: NavBarProps) {
+export default function NavBar() {
     const [theme, setTheme] = useState('light');
-    const currentPage = navbarProps.page;
 
     const navigate = useNavigate();
 
@@ -41,7 +27,6 @@ export default function NavBar(navbarProps: NavBarProps) {
         localStorage.removeItem("session"); // Remove a sessão
         navigate("/login"); // Redireciona para login
     };
-
 
     useEffect(() => {
         const savedTheme = localStorage.getItem('theme');
@@ -62,7 +47,13 @@ export default function NavBar(navbarProps: NavBarProps) {
                                     {navigation.map((item) => (
                                         <NavLink
                                             key={item.name}
-                                            className={`${item.name == currentPage ? 'bg-gray-700 bg-opacity-55 text-white' : 'hover:bg-gray-900 hover:bg-opacity-20 hover:text-white'} rounded-md px-3 py-2 text-sm font-medium`}
+                                            className={({ isActive }) =>
+                                                `px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                                                    isActive
+                                                        ? 'bg-gray-900 text-white'
+                                                        : 'text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                                                }`
+                                            }
                                             to={item.href}
                                             end
                                         >
@@ -72,7 +63,7 @@ export default function NavBar(navbarProps: NavBarProps) {
                                 </div>
                             </div>
                         </div>
-                        <div className="hidden md:inline-flex">
+                        <div className="hidden md:inline-flex items-center space-x-4">
                             <details className="dropdown">
                                 <summary className="block text-sm cursor-pointer"><IoColorPaletteOutline size={40} /></summary>
                                 <ul className="menu dropdown-content bg-base-100 rounded-box z-[1] w-35 p-2">
@@ -88,40 +79,16 @@ export default function NavBar(navbarProps: NavBarProps) {
                                     ))}
                                 </ul>
                             </details>
-                            <div className="ml-4 flex items-center md:ml-6">
-                                <Menu as="div" className="relative ml-3">
-                                    <div>
-                                        <MenuButton className="relative flex max-w-xs items-center rounded-full bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800">
-                                            <img alt="" src={user.imageUrl} className="size-10 rounded-full" />
-                                        </MenuButton>
-                                    </div>
-                                    <MenuItems
-                                        transition
-                                        className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5 focus:outline-none"
-                                    >
-                                        {userNavigation.map((item) => (
-                                            <MenuItem key={item.name}>
-                                                {item.name === 'Sign out' ? (
-                                                    <button
-                                                        onClick={handleLogout}
-                                                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                    >
-                                                        {item.name}
-                                                    </button>
-                                                ) : (
-                                                    <a
-                                                        href={item.href}
-                                                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                                    >
-                                                        {item.name}
-                                                    </a>
-                                                )}
-                                            </MenuItem>
-                                        ))}
-
-                                    </MenuItems>
-                                </Menu>
-                            </div>
+                            
+                            <button
+                                onClick={handleLogout}
+                                className="p-2 text-gray-600 transition-colors duration-200"
+                                title="Sair"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
