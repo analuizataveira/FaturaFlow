@@ -84,8 +84,44 @@ jobs:
       - name: Build
         run: npm run build
 
-  test-cypress:
+  test-jest:
     needs: build-frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Cache dependencies
+        id: cache-frontend
+        uses: actions/cache@v3
+        with:
+          path: frontend/node_modules
+          key: frontend-modules-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install dependencies
+        if: steps.cache-frontend.outputs.cache-hit != 'true'
+        run: npm ci
+
+      - name: Run Jest unit tests
+        run: npm test -- --coverage --watchAll=false
+
+      - name: Upload test coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jest-coverage
+          path: frontend/coverage
+          if-no-files-found: ignore
+
+  test-cypress:
+    needs: test-jest
     runs-on: ubuntu-latest
     defaults:
       run:
