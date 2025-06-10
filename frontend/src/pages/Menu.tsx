@@ -1,108 +1,65 @@
 import { useNavigate } from "react-router";
 import NavBar from "../components/Navbar";
+import { useState } from "react";
+import Modal from "../components/Modal";
+import CsvUploader from "../components/CSVUploader";
 
-// Interface para o evento de mudança do input
-interface FileChangeEvent extends Event {
-  target: HTMLInputElement & EventTarget;
-}
-
-// Interface para tipagem dos dados do CSV
-interface CSVData {
-  [key: string]: string;
-}
 
 export default function Menu() {
-  // Função para lidar com a importação do CSV
-  const handleCSVImport = (): void => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv';
-
-    input.addEventListener('change', (event: Event) => {
-      const fileEvent = event as FileChangeEvent;
-      const file = fileEvent.target.files?.[0];
-
-      if (file) {
-        readCSVFile(file);
-      }
-    });
-
-    input.click();
-  };
-
   const navigate = useNavigate();
+  const [showCsvUpload, setShowCsvUpload] = useState(false);
 
 
-  // Função para ler o conteúdo do arquivo
-  const readCSVFile = (file: File): void => {
-    const reader = new FileReader();
+  // Pega o usuário do localStorage
+  const [user] = useState(() => {
+    const userData = localStorage.getItem('session');
+    return userData ? JSON.parse(userData) : null;
+  });
 
-    reader.onload = (e: ProgressEvent<FileReader>) => {
-      const text = e.target?.result as string;
-      const data = parseCSV(text);
-      console.log('Dados do CSV:', data);
-      // Aqui você pode adicionar lógica para usar os dados
-    };
-
-    reader.onerror = (e) => {
-      console.error('Erro ao ler o arquivo:', e);
-    };
-
-    reader.readAsText(file);
-  };
-
-  // Função para parsear o CSV usando a interface CSVData
-  const parseCSV = (csvText: string): CSVData[] => {
-    const lines = csvText.trim().split('\n');
-    const headers = lines[0].split(',').map(header => header.trim());
-    const result: CSVData[] = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(value => value.trim());
-      const obj: CSVData = {};
-
-      headers.forEach((header, index) => {
-        obj[header] = values[index] || '';
-      });
-
-      result.push(obj);
-    }
-
-    return result;
+  // Função para quando o upload CSV for bem-sucedido
+  const handleCsvUploadSuccess = () => {
+    setShowCsvUpload(false); // Fecha o modal de upload
+    navigate('/invoicesform');
   };
 
   return (
     <div>
-      <NavBar page={"Menu"} />
+      <NavBar/>
       <div className="mx-auto max-w-2xl px-6 lg:max-w-7xl lg:px-8">
         <h2 className="text-center text-base/7 font-semibold text-indigo-600">FaturaFlow</h2>
         <p className="mx-auto mt-2 max-w-lg text-balance text-center text-4xl font-semibold tracking-tight text-gray-950 sm:text-5xl">
           Tudo que você precisa para gerenciar suas finanças
         </p>
-        
+
+
+
         {/* Container principal com flex para alinhar os quadrados */}
-        <div className="flex flex-col lg:flex-row justify-between gap-4 mt-10"> 
+        <div className="flex flex-col lg:flex-row justify-between gap-4 mt-10">
           {/* Primeiro quadrado */}
           <div className="w-full lg:w-1/2">
             <div className="relative">
-              <div className="px-8 pb-3 pt-8 sm:px-10 sm:pb-10 sm:pt-10 bg-white rounded-lg shadow">
+                <div className="px-8 pb-3 pt-8 sm:px-10 sm:pb-10 sm:pt-10 bg-white rounded-lg shadow">
                 <p className="mt-2 text-lg font-medium tracking-tight text-gray-950 text-center">
                   Importação
                 </p>
                 <p className="mt-2 text-sm/6 text-gray-600 text-center">
                   Aqui você pode importar seus dados financeiros em formato CSV.
                 </p>
-                <button 
-                  className="btn btn-info mt-4 mx-auto block"
-                  onClick={handleCSVImport}
+                <button
+                  className="btn btn-info mt-4 mx-auto flex items-center gap-2 px-4 py-2"
+                  onClick={() => setShowCsvUpload(true)}
+                  disabled={!user?.id}
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
                   Importar CSV
                 </button>
-              </div>
+                </div>
               <div className="pointer-events-none absolute inset-px rounded-lg ring-1 ring-black/5"></div>
             </div>
           </div>
-  
+
           {/* Segundo quadrado */}
           <div className="w-full lg:w-1/2">
             <div className="relative">
@@ -113,7 +70,7 @@ export default function Menu() {
                 <p className="mt-2 text-sm/6 text-gray-600 text-center">
                   Inserir dados referentes a fatura o cartão e outros gastos manualmente.
                 </p>
-                <button 
+                <button
                   className="btn btn-info mt-4 mx-auto block"
                   onClick={() => navigate('/invoicesform')}
                 >
@@ -125,6 +82,16 @@ export default function Menu() {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={showCsvUpload}
+        onCloseClick={() => setShowCsvUpload(false)}
+      >
+        <CsvUploader
+          userId={user?.id || ''}
+          onUploadSuccess={handleCsvUploadSuccess}
+        />
+      </Modal>
     </div>
   );
 }

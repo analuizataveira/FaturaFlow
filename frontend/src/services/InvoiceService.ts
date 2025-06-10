@@ -12,6 +12,11 @@ interface InvoicesResponse {
   categories: Record<string, CategoryDetails>;
 }
 
+interface CsvUploadResponse {
+  message: string;
+  invoicesCreated: number;
+}
+
 // Função para criar uma fatura
 export async function createInvoice(invoice: Invoice) {
   try {
@@ -119,11 +124,35 @@ export const deleteInvoice = async (id: string): Promise<void> => {
     if (!response.ok) {
       throw new Error("Falha ao deletar fatura");
     }
-    // ... resto do código
   } catch (error) {
-    // ... tratamento de erro
+    console.error("Erro ao deletar fatura:", error);
+    throw new Error("Erro ao deletar fatura. Por favor, tente novamente.");
   }
 };
+
+// Função para upload de CSV
+export async function uploadCsvInvoices(userId: string, file: File): Promise<CsvUploadResponse> {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`http://localhost:3000/api/invoices/upload/csv/users/${userId}`, {
+      method: 'POST',
+      body: formData,
+      // Não definir Content-Type - o browser define automaticamente como multipart/form-data
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || 'Erro ao fazer upload do CSV');
+    }
+
+    return result;
+  } catch (error) {
+    console.error('CSV Upload Error:', error);
+    throw new Error(error instanceof Error ? error.message : 'Erro ao fazer upload do CSV');
+  }
+}
+
 
 // Converte data de 'dd/MM/yyyy' (backend) para 'yyyy-MM-dd' (input date)
 export const formatDateToFrontend = (
@@ -148,6 +177,7 @@ export const formatDateToFrontend = (
   return getCurrentDateFormatted();
 };
 
+
 // Em services/InvoiceService.ts
 export function getCurrentDateFormatted(): string {
   const now = new Date();
@@ -156,3 +186,5 @@ export function getCurrentDateFormatted(): string {
   const localDate = new Date(now.getTime() - offset * 60 * 1000);
   return localDate.toISOString().split("T")[0];
 }
+
+

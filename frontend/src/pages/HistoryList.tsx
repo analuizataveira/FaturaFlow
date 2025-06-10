@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { FiFilter, FiCalendar, FiDollarSign, FiPieChart, FiTrash2 } from 'react-icons/fi';
+import { FiFilter, FiCalendar, FiDollarSign, FiPieChart, FiTrash2, FiEdit3, FiSave, FiX } from 'react-icons/fi';
 import { Invoice } from '../models/Invoice';
-import { getInvoicesByUserId } from '../services/InvoiceService';
+import { getInvoicesByUserId, deleteInvoice, editInvoice } from '../services/InvoiceService';
 import NavBar from '../components/Navbar';
 import { Pie } from 'react-chartjs-2';
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
@@ -22,6 +22,8 @@ export default function HistoryPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [totalAmount, setTotalAmount] = useState(0);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [filters, setFilters] = useState({
         category: '',
         payment: '',
@@ -85,6 +87,64 @@ export default function HistoryPage() {
       localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
     };
 
+    // Função para deletar uma invoice
+    const handleDeleteInvoice = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta despesa?')) {
+            return;
+        }
+
+        try {
+            await deleteInvoice(id);
+            const updatedInvoices = invoices.filter(invoice => invoice._id !== id);
+            setInvoices(updatedInvoices);
+            setTotalAmount(calculateTotal(updatedInvoices));
+        } catch (error) {
+            console.error('Erro ao deletar fatura:', error);
+            alert('Erro ao excluir despesa. Tente novamente.');
+        }
+    };
+
+    // Função para iniciar edição
+    const startEditing = (invoice: Invoice) => {
+        setEditingId(invoice._id || '');
+        setEditingInvoice({...invoice});
+    };
+
+    // Função para cancelar edição
+    const cancelEditing = () => {
+        setEditingId(null);
+        setEditingInvoice(null);
+    };
+
+    // Função para salvar edição
+    const saveEdit = async () => {
+        if (!editingInvoice) return;
+
+        try {
+            await editInvoice(editingInvoice);
+            const updatedInvoices = invoices.map(invoice => 
+                invoice._id === editingInvoice._id ? editingInvoice : invoice
+            );
+            setInvoices(updatedInvoices);
+            setTotalAmount(calculateTotal(updatedInvoices));
+            setEditingId(null);
+            setEditingInvoice(null);
+        } catch (error) {
+            console.error('Erro ao editar fatura:', error);
+            alert('Erro ao salvar alterações. Tente novamente.');
+        }
+    };
+
+    // Função para atualizar campos da invoice sendo editada
+    const updateEditingInvoice = (field: string, value: string | number) => {
+        if (!editingInvoice) return;
+        
+        setEditingInvoice({
+            ...editingInvoice,
+            [field]: field === 'value' ? parseFloat(value.toString()) || 0 : value
+        });
+    };
+
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -106,7 +166,7 @@ export default function HistoryPage() {
 
     return (
         <div>
-            <NavBar page="History" />
+            <NavBar/>
 
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
@@ -127,6 +187,7 @@ export default function HistoryPage() {
                     </div>
                 </div>
 
+                {/* Filtros */}
                 <div className="bg-base-200 p-6 rounded-lg mb-8">
                     <div className="flex items-center gap-2 mb-4">
                         <FiFilter className="text-lg" />
@@ -192,6 +253,7 @@ export default function HistoryPage() {
                     </div>
                 </div>
 
+                {/* Tabela com edição inline */}
                 <div className="bg-base-100 rounded-lg shadow overflow-hidden mb-12">
                     <div className="overflow-x-auto">
                         <table className="table">
@@ -202,13 +264,14 @@ export default function HistoryPage() {
                                     <th>Valor</th>
                                     <th>Categoria</th>
                                     <th>Pagamento</th>
+                                    <th>Ações</th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 {filteredInvoices.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="text-center py-8">
+                                        <td colSpan={6} className="text-center py-8">
                                             <div className="flex flex-col items-center justify-center">
                                                 <FiPieChart className="text-4xl text-gray-400 mb-2" />
                                                 <p className="text-gray-500">Nenhuma transação encontrada</p>
@@ -231,22 +294,136 @@ export default function HistoryPage() {
                                 ) : (
                                     filteredInvoices.map((invoice) => (
                                         <tr key={invoice._id} className="hover">
+                                            {/* Data */}
                                             <td>
-                                                <div className="flex items-center gap-2">
-                                                    <FiCalendar className="text-gray-400" />
-                                                    {new Date(invoice.date).toLocaleDateString()}
+                                                {editingId === invoice._id ? (
+                                                    <input
+                                                        type="date"
+                                                        className="input input-sm input-bordered w-full"
+                                                        value={editingInvoice?.date || ''}
+                                                        onChange={(e) => updateEditingInvoice('date', e.target.value)}
+                                                    />
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <FiCalendar className="text-gray-400" />
+                                                        {new Date(invoice.date).toLocaleDateString()}
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            {/* Descrição */}
+                                            <td>
+                                                {editingId === invoice._id ? (
+                                                    <input
+                                                        type="text"
+                                                        className="input input-sm input-bordered w-full"
+                                                        value={editingInvoice?.description || ''}
+                                                        onChange={(e) => updateEditingInvoice('description', e.target.value)}
+                                                    />
+                                                ) : (
+                                                    invoice.description
+                                                )}
+                                            </td>
+
+                                            {/* Valor */}
+                                            <td className="font-medium">
+                                                {editingId === invoice._id ? (
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        className="input input-sm input-bordered w-full"
+                                                        value={editingInvoice?.value || 0}
+                                                        onChange={(e) => updateEditingInvoice('value', e.target.value)}
+                                                    />
+                                                ) : (
+                                                    `R$ ${invoice.value.toFixed(2)}`
+                                                )}
+                                            </td>
+
+                                            {/* Categoria */}
+                                            <td>
+                                                {editingId === invoice._id ? (
+                                                    <select
+                                                        className="select select-sm select-bordered w-full"
+                                                        value={editingInvoice?.category || ''}
+                                                        onChange={(e) => updateEditingInvoice('category', e.target.value)}
+                                                    >
+                                                        <option value="Alimentação">Alimentação</option>
+                                                        <option value="Transporte">Transporte</option>
+                                                        <option value="Serviços">Serviços</option>
+                                                        <option value="Saúde">Saúde</option>
+                                                        <option value="Lazer">Lazer</option>
+                                                        <option value="Educação">Educação</option>
+                                                        <option value="Vestuário">Vestuário</option>
+                                                        <option value="Casa e Moradia">Casa e Moradia</option>
+                                                        <option value="Bancos e Finanças">Bancos e Finanças</option>
+                                                        <option value="Outros">Outros</option>
+                                                    </select>
+                                                ) : (
+                                                    <span className="badge badge-outline">
+                                                        {invoice.category}
+                                                    </span>
+                                                )}
+                                            </td>
+
+                                            {/* Pagamento */}
+                                            <td>
+                                                {editingId === invoice._id ? (
+                                                    <select
+                                                        className="select select-sm select-bordered w-full"
+                                                        value={editingInvoice?.payment || ''}
+                                                        onChange={(e) => updateEditingInvoice('payment', e.target.value)}
+                                                    >
+                                                        <option value="Dinheiro">Dinheiro</option>
+                                                        <option value="Cartão de Crédito">Cartão de Crédito</option>
+                                                        <option value="Cartão de Débito">Cartão de Débito</option>
+                                                        <option value="Pix">Pix</option>
+                                                    </select>
+                                                ) : (
+                                                    invoice.payment
+                                                )}
+                                            </td>
+
+                                            {/* Ações */}
+                                            <td>
+                                                <div className="flex gap-2">
+                                                    {editingId === invoice._id ? (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-circle btn-sm btn-success"
+                                                                onClick={saveEdit}
+                                                                title="Salvar"
+                                                            >
+                                                                <FiSave className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-circle btn-sm btn-ghost"
+                                                                onClick={cancelEditing}
+                                                                title="Cancelar"
+                                                            >
+                                                                <FiX className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-circle btn-sm btn-ghost text-blue-600"
+                                                                onClick={() => startEditing(invoice)}
+                                                                title="Editar"
+                                                            >
+                                                                <FiEdit3 className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-circle btn-sm btn-ghost text-red-600"
+                                                                onClick={() => handleDeleteInvoice(invoice._id || '')}
+                                                                title="Excluir"
+                                                            >
+                                                                <FiTrash2 className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </td>
-                                            <td>{invoice.description}</td>
-                                            <td className="font-medium">
-                                                R$ {invoice.value.toFixed(2)}
-                                            </td>
-                                            <td>
-                                                <span className="badge badge-outline">
-                                                    {invoice.category}
-                                                </span>
-                                            </td>
-                                            <td>{invoice.payment}</td>
                                         </tr>
                                     ))
                                 )}
@@ -255,6 +432,7 @@ export default function HistoryPage() {
                     </div>
                 </div>
 
+                {/* Histórico de Análises */}
                 {savedAnalyses.length > 0 && (
                   <div className="mt-12">
                     <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
