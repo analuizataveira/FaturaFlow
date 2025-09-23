@@ -131,28 +131,66 @@ export const deleteInvoice = async (id: string): Promise<void> => {
 };
 
 // Função para upload de CSV
-export async function uploadCsvInvoices(userId: string, file: File): Promise<CsvUploadResponse> {
+export async function uploadCsvInvoices(
+  userId: string,
+  file: File
+): Promise<CsvUploadResponse> {
   try {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
-    const response = await fetch(`http://localhost:3000/api/invoices/upload/csv/users/${userId}`, {
-      method: 'POST',
-      body: formData,
-      // Não definir Content-Type - o browser define automaticamente como multipart/form-data
-    });
+    const response = await fetch(
+      `http://localhost:3000/api/invoices/upload/csv/users/${userId}`,
+      {
+        method: "POST",
+        body: formData,
+        // Não definir Content-Type - o browser define automaticamente como multipart/form-data
+      }
+    );
     const result = await response.json();
     if (!response.ok) {
-      throw new Error(result.error || 'Erro ao fazer upload do CSV');
+      throw new Error(result.error || "Erro ao fazer upload do CSV");
     }
 
     return result;
   } catch (error) {
-    console.error('CSV Upload Error:', error);
-    throw new Error(error instanceof Error ? error.message : 'Erro ao fazer upload do CSV');
+    console.error("CSV Upload Error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Erro ao fazer upload do CSV"
+    );
   }
 }
 
+// Função para upload de PDF
+export async function uploadPdfInvoices(
+  userId: string,
+  file: File
+): Promise<CsvUploadResponse> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(
+      `http://localhost:3000/api/invoices/upload/pdf/users/${userId}`,
+      {
+        method: "POST",
+        body: formData,
+        // Não definir Content-Type - o browser define automaticamente como multipart/form-data
+      }
+    );
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao fazer upload do PDF");
+    }
+
+    return result;
+  } catch (error) {
+    console.error("PDF Upload Error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Erro ao fazer upload do PDF"
+    );
+  }
+}
 
 // Converte data de 'dd/MM/yyyy' (backend) para 'yyyy-MM-dd' (input date)
 export const formatDateToFrontend = (
@@ -177,7 +215,6 @@ export const formatDateToFrontend = (
   return getCurrentDateFormatted();
 };
 
-
 // Em services/InvoiceService.ts
 export function getCurrentDateFormatted(): string {
   const now = new Date();
@@ -186,5 +223,3 @@ export function getCurrentDateFormatted(): string {
   const localDate = new Date(now.getTime() - offset * 60 * 1000);
   return localDate.toISOString().split("T")[0];
 }
-
-

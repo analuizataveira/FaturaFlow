@@ -2,7 +2,9 @@ import { NotFoundError } from '../../../shared/handlers/error-handler';
 import { Invoice } from '../models/invoice.type';
 import invoicesRepository from '../repositories/invoices.repository';
 import { CsvInvoiceData, parseCsvRowDTO } from '../dtos/upload-csv.dto';
+import chatGptService from '../../../shared/services/chatgpt.service';
 import { parse } from 'csv-parse/sync';
+import pdf from 'pdf-parse';
 
 const create = async (invoiceData: Omit<Invoice, 'id'>): Promise<Invoice> => {
   return await invoicesRepository.create(invoiceData);
@@ -85,7 +87,6 @@ const uploadCsv = async (
   userId: string,
 ): Promise<{ success: boolean; imported: number; errors: number }> => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const records = parse(file, {
       columns: true,
       skip_empty_lines: true,
@@ -116,6 +117,45 @@ const uploadCsv = async (
   }
 };
 
+const uploadPdf = async (
+  file: Buffer,
+  userId: string,
+): Promise<{ success: boolean; imported: number; errors: number; summary?: any }> => {
+  try {
+    // Extrai o texto do PDF
+    const pdfData = await pdf(file);
+    const text = pdfData.text;
+
+    // Envia o texto para o ChatGPT processar
+    const chatGptResponse = await chatGptService.processNubankTransactions(text, userId);
+
+    let imported = 0;
+    let errors = 0;
+
+    console.log('ChatGPT response:', chatGptResponse);
+    // Salva as transações no banco de dados
+    for (const invoiceData of chatGptResponse.transactions) {
+      try {
+        await invoicesRepository.create(invoiceData);
+        imported++;
+      } catch (error) {
+        console.error('Error creating invoice:', error);
+        errors++;
+      }
+    }
+
+    return {
+      success: true,
+      imported,
+      errors,
+      summary: chatGptResponse.summary,
+    };
+  } catch (error: any) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    throw new Error('Error processing the PDF file: ' + error.message);
+  }
+};
+
 export default {
   create,
   findById,
@@ -124,4 +164,5 @@ export default {
   deleteInvoice,
   deleteByUserId,
   uploadCsv,
+  uploadPdf,
 };

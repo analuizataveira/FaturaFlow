@@ -1,0 +1,9 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.spec.ts"],
+  "exec": "tsc && node --env-file=.env dist/index.js",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
