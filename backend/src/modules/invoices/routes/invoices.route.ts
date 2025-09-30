@@ -9,6 +9,7 @@ export const invoicesRoutes = (
 ) => {
   fastify.post('/', invoicesController.create);
   fastify.post('/upload/csv/users/:id', invoicesController.uploadCsv);
+  fastify.post('/upload/pdf/users/:id', invoicesController.uploadPdf);
   fastify.get('/:id', invoicesController.findOne);
   fastify.get('/users/:id', invoicesController.findAll);
   fastify.patch('/:id', invoicesController.update);

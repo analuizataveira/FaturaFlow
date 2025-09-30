@@ -73,7 +73,7 @@ const categorizeByTitle = (title: string): string => {
     titleLower.includes('netflix') ||
     titleLower.includes('spotify') ||
     titleLower.includes('amazon prime') ||
-    titleLower.includes('apple')  ||
+    titleLower.includes('apple') ||
     titleLower.includes('sony')
   ) {
     return 'Serviços';
@@ -91,7 +91,7 @@ const categorizeByTitle = (title: string): string => {
     titleLower.includes('consulta') ||
     titleLower.includes('dentista') ||
     titleLower.includes('academia') ||
-    titleLower.includes('fit') 
+    titleLower.includes('fit')
   ) {
     return 'Saúde';
   }
@@ -136,7 +136,6 @@ const categorizeByTitle = (title: string): string => {
     titleLower.includes('c&a') ||
     titleLower.includes('zara') ||
     titleLower.includes('look')
-
   ) {
     return 'Vestuário';
   }

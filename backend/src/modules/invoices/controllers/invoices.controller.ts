@@ -71,13 +71,11 @@ const uploadCsv = async (
   const { params } = request;
   const userId = mongooseIdDTO(params);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   if (!request.isMultipart()) {
     return reply.status(400).send({ error: 'The request must be multipart/form-data' });
   }
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
     const data = await request.file();
 
     if (!data) {
@@ -89,9 +87,40 @@ const uploadCsv = async (
       return reply.status(400).send({ error: validation.message });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     const buffer = await data.toBuffer();
     const result = await invoicesService.uploadCsv(buffer, userId);
+
+    return reply.status(200).send(result);
+  } catch (err) {
+    return reply.status(400).send({
+      error: 'Error processing the file',
+      message: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+};
+
+const uploadPdf = async (
+  request: FastifyRequest<{
+    Params: { id: string };
+  }>,
+  reply: FastifyReply,
+) => {
+  const { params } = request;
+  const userId = mongooseIdDTO(params);
+
+  if (!request.isMultipart()) {
+    return reply.status(400).send({ error: 'The request must be multipart/form-data' });
+  }
+
+  try {
+    const data = await request.file();
+
+    if (!data) {
+      return reply.status(400).send({ error: 'No file provided' });
+    }
+
+    const buffer = await data.toBuffer();
+    const result = await invoicesService.uploadPdf(buffer, userId);
 
     return reply.status(200).send(result);
   } catch (err) {
@@ -110,4 +139,5 @@ export default {
   deleteInvoice,
   deleteAll,
   uploadCsv,
+  uploadPdf,
 };
