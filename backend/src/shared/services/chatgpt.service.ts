@@ -25,15 +25,6 @@ class ChatGptService {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
-    // this.openai = {
-    //   chat: {
-    //     completions: {
-    //       create: () => ({
-    //         choices: [{ message: { content: '' } }],
-    //       }),
-    //     },
-    //   },
-    // };
   }
 
   async processNubankTransactions(extractedText: string, userId: string): Promise<ChatGptResponse> {
@@ -45,16 +36,36 @@ class ChatGptService {
         messages: [
           {
             role: 'system',
-            content: `Você é um especialista em análise de extratos bancários. 
-            Sua tarefa é extrair transações de um texto de fatura de cartão de crédito e categorizá-las adequadamente.
-            
-            IMPORTANTE:
-            - Retorne APENAS um JSON válido, sem texto adicional
-            - Use as categorias: Alimentação, Transporte, Serviços, Saúde, Lazer, Educação, Vestuário, Casa e Moradia, Bancos e Finanças, Outros
-            - Para pagamentos (valores negativos), use a categoria "Pagamentos"
-            - O campo "payment" deve ser sempre "Cartão de Crédito"
-            - Valores devem ser números positivos (sem sinal negativo)
-            - Datas devem estar no formato DD/MM/YYYY`,
+            content: `Você é um assistente especializado em processamento de extratos bancários brasileiros com foco em faturas de cartão de crédito.
+
+OBJETIVO: Extrair e categorizar transações de forma precisa e consistente.
+
+REGRAS OBRIGATÓRIAS:
+1. Retorne APENAS JSON válido - sem texto adicional, explicações ou markdown
+2. Todos os valores devem ser números positivos (sem símbolos ou sinais)
+3. Datas sempre no formato DD/MM/YYYY
+4. Descrições limpas, sem códigos de cartão ou caracteres especiais desnecessários
+5. Campo "payment" sempre "Cartão de Crédito"
+6. Ignore linhas que não sejam transações (títulos, totais, cabeçalhos)
+
+CATEGORIAS DISPONÍVEIS:
+• Alimentação - Supermercados, restaurantes, delivery, padarias, açougues, hortifruti
+• Transporte - Combustível, Uber, 99, táxi, estacionamento, pedágios, manutenção veicular
+• Serviços - Streaming, assinaturas, internet, telefone, água, luz, gás
+• Saúde - Farmácias, consultas, exames, planos de saúde, academias
+• Lazer - Cinema, shows, bares, viagens, hotéis, entretenimento
+• Educação - Cursos, livros, mensalidades escolares, material didático
+• Vestuário - Roupas, calçados, acessórios, lojas de moda
+• Casa e Moradia - Aluguel, condomínio, móveis, decoração, reformas, utensílios
+• Bancos e Finanças - Taxas bancárias, juros, anuidades, seguros, investimentos
+• Pagamentos - Valores negativos (créditos, estornos, pagamentos recebidos)
+• Outros - Quando não se encaixar claramente em nenhuma categoria acima
+
+TRATAMENTO DE CASOS ESPECIAIS:
+• Parcelamentos: Manter descrição original com indicação de parcela
+• Estornos/Créditos: Categoria "Pagamentos" com valor positivo
+• Compras internacionais: Categorizar normalmente, manter moeda original na descrição se presente
+• Transações duplicadas: Incluir todas, não filtrar`,
           },
           {
             role: 'user',
@@ -70,10 +81,8 @@ class ChatGptService {
         throw new Error('No response from ChatGPT');
       }
 
-      // Tenta fazer parse do JSON
       let parsedResponse: ChatGptResponse;
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         parsedResponse = JSON.parse(response);
       } catch (parseError) {
         console.error('Error parsing ChatGPT response:', parseError);
@@ -81,7 +90,6 @@ class ChatGptService {
         throw new Error('Invalid JSON response from ChatGPT');
       }
 
-      // Valida a estrutura da resposta
       this.validateResponse(parsedResponse);
 
       return parsedResponse;
@@ -93,64 +101,143 @@ class ChatGptService {
   }
 
   private createPrompt(extractedText: string, userId: string): string {
-    return `
-Analise o seguinte texto extraído de uma fatura de cartão de crédito e extraia todas as transações, categorizando-as adequadamente.
+    return `Analise a fatura de cartão de crédito abaixo e extraia TODAS as transações encontradas.
 
-TEXTO EXTRAÍDO:
+═══════════════════════════════════════════════════════════════
+TEXTO DA FATURA:
+═══════════════════════════════════════════════════════════════
 ${extractedText}
 
-INSTRUÇÕES:
-1. Encontre todas as transações que contêm valores em R$
-2. Para cada transação, extraia:
-   - Data (formato DD/MM/YYYY)
-   - Descrição (limpa, sem códigos do cartão)
-   - Valor (número positivo)
-   - Categoria (baseada na descrição)
-   - Payment: "Cartão de Crédito"
-   - UserId: "${userId}"
+═══════════════════════════════════════════════════════════════
+INSTRUÇÕES DE EXTRAÇÃO:
+═══════════════════════════════════════════════════════════════
 
-3. Categorize baseado na descrição:
-   - Alimentação: supermercados, restaurantes, delivery, padarias, etc.
-   - Transporte: postos, gasolina, uber, taxi, etc.
-   - Serviços: luz, água, internet, telefone, streaming, etc.
-   - Saúde: farmácias, médicos, hospitais, etc.
-   - Lazer: cinema, shows, bares, etc.
-   - Educação: cursos, livros, mensalidades, etc.
-   - Vestuário: roupas, calçados, lojas, etc.
-   - Casa e Moradia: aluguel, condomínio, móveis, etc.
-   - Bancos e Finanças: taxas, juros, anuidades, etc.
-   - Pagamentos: para valores negativos (pagamentos recebidos)
-   - Outros: quando não se encaixar em nenhuma categoria
+1. IDENTIFICAÇÃO DE TRANSAÇÕES:
+   • Procure por linhas contendo valores monetários (R$, reais, ou números com vírgula/ponto decimal)
+   • Cada transação geralmente contém: data + descrição + valor
+   • Ignore cabeçalhos, rodapés, totais gerais e linhas informativas
 
-4. Calcule um resumo com:
-   - Total de transações
-   - Valor total
-   - Contagem e valor por categoria
+2. EXTRAÇÃO DE DADOS:
+   • DATA: Converta para DD/MM/YYYY (ex: "06 AGO" → "06/08/2025")
+   • DESCRIÇÃO: Remova códigos de cartão (ex: "**** 1234"), mantenha nome do estabelecimento
+   • VALOR: Extraia apenas o número, sempre positivo (ex: "R$ 82,66" → 82.66)
+   • PAYMENT: Sempre "Cartão de Crédito"
+   • USERID: Use "${userId}"
 
-Retorne APENAS um JSON no seguinte formato:
+3. CATEGORIZAÇÃO INTELIGENTE:
+
+   ALIMENTAÇÃO:
+   • Supermercados: Carrefour, Pão de Açúcar, Extra, Walmart
+   • Restaurantes: iFood, Rappi, Uber Eats, nomes de restaurantes
+   • Padarias, açougues, hortifruti, mercadinhos
+
+   TRANSPORTE:
+   • Combustível: Shell, Ipiranga, Petrobras, BR, postos
+   • Apps: Uber, 99, Cabify, Taxi
+   • Estacionamento, pedágios, lavagem de carro
+
+   SERVIÇOS:
+   • Streaming: Netflix, Spotify, Amazon Prime, Disney+, YouTube
+   • Telecom: Vivo, Claro, Tim, Oi, internet, telefone
+   • Utilidades: Conta de luz, água, gás
+
+   SAÚDE:
+   • Farmácias: Drogasil, Raia, Pacheco, Pague Menos
+   • Planos de saúde, consultas médicas, exames
+   • Academias: Smart Fit, Bio Ritmo
+
+   LAZER:
+   • Entretenimento: Cinema, shows, eventos, ingressos
+   • Viagens: Hotéis, Airbnb, passagens, turismo
+   • Bares, pubs, casas noturnas
+
+   EDUCAÇÃO:
+   • Cursos online: Udemy, Coursera, Alura
+   • Livrarias: Amazon, Saraiva, Cultura
+   • Mensalidades escolares, material didático
+
+   VESTUÁRIO:
+   • Lojas: Renner, C&A, Riachuelo, Zara, Nike, Adidas
+   • Calçados, acessórios, joias
+
+   CASA E MORADIA:
+   • Móveis: Tok&Stok, Leroy Merlin, Casas Bahia
+   • Decoração, utensílios domésticos
+   • Aluguel, condomínio, reformas
+
+   BANCOS E FINANÇAS:
+   • Taxas: Anuidade, juros, IOF, tarifas bancárias
+   • Seguros: Seguro de vida, residencial, veicular
+   • Investimentos, corretoras
+
+   PAGAMENTOS:
+   • Estornos, créditos, devoluções
+   • Pagamentos recebidos (valores negativos no extrato)
+
+   OUTROS:
+   • Quando não houver correspondência clara com as categorias acima
+   • Transações genéricas ou não identificáveis
+
+4. CASOS ESPECIAIS:
+   • Parcelamentos: Mantenha "Parcela X/Y" na descrição
+   • Valores negativos: Use categoria "Pagamentos", mas valor positivo no JSON
+   • Compras internacionais: Categorize normalmente
+   • Assinaturas recorrentes: Identifique pela descrição (ex: "Netflix" → Serviços)
+
+═══════════════════════════════════════════════════════════════
+FORMATO DE SAÍDA (JSON):
+═══════════════════════════════════════════════════════════════
+
 {
   "transactions": [
     {
       "date": "06/08/2025",
       "description": "Mercadopago Fisiacom - Parcela 3/3",
       "value": 82.66,
-      "category": "Outros",
+      "category": "Saúde",
+      "payment": "Cartão de Crédito",
+      "userId": "${userId}"
+    },
+    {
+      "date": "08/08/2025",
+      "description": "iFood - Restaurante Italiano",
+      "value": 45.90,
+      "category": "Alimentação",
+      "payment": "Cartão de Crédito",
+      "userId": "${userId}"
+    },
+    {
+      "date": "10/08/2025",
+      "description": "Posto Shell - Gasolina",
+      "value": 250.00,
+      "category": "Transporte",
       "payment": "Cartão de Crédito",
       "userId": "${userId}"
     }
   ],
   "summary": {
-    "totalTransactions": 1,
-    "totalValue": 82.66,
+    "totalTransactions": 3,
+    "totalValue": 378.56,
     "categories": {
-      "Outros": {
+      "Saúde": {
         "count": 1,
         "totalValue": 82.66
+      },
+      "Alimentação": {
+        "count": 1,
+        "totalValue": 45.90
+      },
+      "Transporte": {
+        "count": 1,
+        "totalValue": 250.00
       }
     }
   }
 }
-`;
+
+═══════════════════════════════════════════════════════════════
+IMPORTANTE: Retorne APENAS o JSON, sem texto adicional.
+═══════════════════════════════════════════════════════════════`;
   }
 
   private validateResponse(response: ChatGptResponse): void {
@@ -162,7 +249,6 @@ Retorne APENAS um JSON no seguinte formato:
       throw new Error('Invalid response: summary is required');
     }
 
-    // Valida cada transação
     for (const transaction of response.transactions) {
       if (!transaction.date || !transaction.description || !transaction.value) {
         throw new Error('Invalid transaction: missing required fields');
