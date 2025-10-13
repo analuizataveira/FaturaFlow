@@ -32,7 +32,7 @@ class ChatGptService {
       const prompt = this.createPrompt(extractedText, userId);
 
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-5-nano',
+        model: 'gpt-4.1-mini',
         messages: [
           {
             role: 'system',
@@ -83,7 +83,7 @@ TRATAMENTO DE CASOS ESPECIAIS:
 
       let parsedResponse: ChatGptResponse;
       try {
-        parsedResponse = JSON.parse(response);
+        parsedResponse = JSON.parse(response) as ChatGptResponse;
       } catch (parseError) {
         console.error('Error parsing ChatGPT response:', parseError);
         console.error('Raw response:', response);

@@ -28,7 +28,10 @@ const findByUserId = async (
 }> => {
   const invoices = await invoicesRepository.findByUserId(userId);
 
-  const result = invoices.reduce(
+  // Filter out analysis documents (CSV and PDF analyses)
+  const regularInvoices = invoices.filter((invoice) => !invoice.invoiceName || !invoice.invoices);
+
+  const result = regularInvoices.reduce(
     (acc, invoice) => {
       acc.totalAmount = parseFloat((acc.totalAmount + invoice.value).toFixed(2));
       if (!acc.categories[invoice.category]) {
@@ -85,7 +88,8 @@ const deleteByUserId = async (userId: string): Promise<{ message: string }> => {
 const uploadCsv = async (
   file: Buffer,
   userId: string,
-): Promise<{ success: boolean; imported: number; errors: number }> => {
+  invoiceName?: string,
+): Promise<{ success: boolean; imported: number; errors: number; analysisId: string }> => {
   try {
     const records = parse(file, {
       columns: true,
@@ -94,22 +98,47 @@ const uploadCsv = async (
 
     let imported = 0;
     let errors = 0;
+    const processedInvoices: Array<{
+      date: string;
+      description: string;
+      value: number;
+      category: string;
+    }> = [];
 
     for (const record of records) {
       try {
         const invoiceData = parseCsvRowDTO(record, userId);
-        await invoicesRepository.create(invoiceData);
+        processedInvoices.push({
+          date: invoiceData.date,
+          description: invoiceData.description,
+          value: invoiceData.value,
+          category: invoiceData.category,
+        });
         imported++;
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
+      } catch {
         errors++;
       }
     }
+
+    // Criar documento de análise
+    const analysisDocument: Omit<Invoice, 'id'> = {
+      date: new Date().toISOString().split('T')[0],
+      description: `Análise CSV: ${invoiceName || 'Upload CSV'}`,
+      value: processedInvoices.reduce((sum, inv) => sum + inv.value, 0),
+      category: 'Análise CSV',
+      payment: 'Cartão de Crédito',
+      userId,
+      invoiceName: invoiceName || `CSV Upload ${new Date().toISOString().split('T')[0]}`,
+      invoices: processedInvoices,
+    };
+
+    const savedAnalysis = await invoicesRepository.create(analysisDocument);
 
     return {
       success: true,
       imported,
       errors,
+      analysisId: savedAnalysis.id,
     };
   } catch (error: any) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
@@ -120,7 +149,14 @@ const uploadCsv = async (
 const uploadPdf = async (
   file: Buffer,
   userId: string,
-): Promise<{ success: boolean; imported: number; errors: number; summary?: any }> => {
+  invoiceName?: string,
+): Promise<{
+  success: boolean;
+  imported: number;
+  errors: number;
+  summary?: any;
+  analysisId: string;
+}> => {
   try {
     // Extrai o texto do PDF
     const pdfData = await pdf(file);
@@ -131,29 +167,113 @@ const uploadPdf = async (
 
     let imported = 0;
     let errors = 0;
+    const processedInvoices: Array<{
+      date: string;
+      description: string;
+      value: number;
+      category: string;
+    }> = [];
 
-    console.log('ChatGPT response:', chatGptResponse);
-    // Salva as transações no banco de dados
+    // Processa as transações
     for (const invoiceData of chatGptResponse.transactions) {
       try {
-        await invoicesRepository.create(invoiceData);
+        processedInvoices.push({
+          date: invoiceData.date,
+          description: invoiceData.description,
+          value: invoiceData.value,
+          category: invoiceData.category,
+        });
         imported++;
       } catch (error) {
-        console.error('Error creating invoice:', error);
+        console.error('Error processing invoice:', error);
         errors++;
       }
     }
+
+    // Criar documento de análise
+    const analysisDocument: Omit<Invoice, 'id'> = {
+      date: new Date().toISOString().split('T')[0],
+      description: `Análise PDF: ${invoiceName || 'Upload PDF'}`,
+      value: processedInvoices.reduce((sum, inv) => sum + inv.value, 0),
+      category: 'Análise PDF',
+      payment: 'Cartão de Crédito',
+      userId,
+      invoiceName: invoiceName || `PDF Upload ${new Date().toISOString().split('T')[0]}`,
+      invoices: processedInvoices,
+    };
+
+    const savedAnalysis = await invoicesRepository.create(analysisDocument);
 
     return {
       success: true,
       imported,
       errors,
       summary: chatGptResponse.summary,
+      analysisId: savedAnalysis.id,
     };
   } catch (error: any) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     throw new Error('Error processing the PDF file: ' + error.message);
   }
+};
+
+// Métodos para análises (CSV e PDF)
+const getAnalyses = async (userId: string): Promise<Invoice[]> => {
+  const invoices = await invoicesRepository.findByUserId(userId);
+  return invoices.filter((invoice) => invoice.invoiceName && invoice.invoices);
+};
+
+const getCsvAnalyses = async (userId: string): Promise<Invoice[]> => {
+  const analyses = await getAnalyses(userId);
+  return analyses.filter((analysis) => analysis.category === 'Análise CSV');
+};
+
+const getPdfAnalyses = async (userId: string): Promise<Invoice[]> => {
+  const analyses = await getAnalyses(userId);
+  return analyses.filter((analysis) => analysis.category === 'Análise PDF');
+};
+
+const getAnalysis = async (id: string): Promise<Invoice> => {
+  const analysis = await invoicesRepository.findById(id);
+
+  if (!analysis) {
+    throw new NotFoundError('Análise não encontrada');
+  }
+
+  if (!analysis.invoiceName || !analysis.invoices) {
+    throw new NotFoundError('Documento não é uma análise');
+  }
+
+  return analysis;
+};
+
+const updateInvoiceInAnalysis = async (
+  analysisId: string,
+  invoiceIndex: number,
+  updateData: {
+    date?: string;
+    description?: string;
+    value?: number;
+    category?: string;
+  },
+): Promise<Invoice> => {
+  const analysis = await getAnalysis(analysisId);
+
+  if (!analysis.invoices || invoiceIndex >= analysis.invoices.length) {
+    throw new NotFoundError('Índice de invoice inválido');
+  }
+
+  const updatedAnalysis = await invoicesRepository.updateInvoiceInArray(
+    analysisId,
+    invoiceIndex,
+    updateData,
+  );
+
+  if (!updatedAnalysis) {
+    throw new NotFoundError('Erro ao atualizar invoice na análise');
+  }
+
+  return updatedAnalysis;
 };
 
 export default {
@@ -165,4 +285,10 @@ export default {
   deleteByUserId,
   uploadCsv,
   uploadPdf,
+  // Analysis methods
+  getAnalyses,
+  getCsvAnalyses,
+  getPdfAnalyses,
+  getAnalysis,
+  updateInvoiceInAnalysis,
 };

@@ -88,7 +88,8 @@ const uploadCsv = async (
     }
 
     const buffer = await data.toBuffer();
-    const result = await invoicesService.uploadCsv(buffer, userId);
+    const fileName = data.filename || 'CSV Upload';
+    const result = await invoicesService.uploadCsv(buffer, userId, fileName);
 
     return reply.status(200).send(result);
   } catch (err) {
@@ -120,12 +121,49 @@ const uploadPdf = async (
     }
 
     const buffer = await data.toBuffer();
-    const result = await invoicesService.uploadPdf(buffer, userId);
+    const fileName = data.filename || 'PDF Upload';
+    const result = await invoicesService.uploadPdf(buffer, userId, fileName);
 
     return reply.status(200).send(result);
   } catch (err) {
     return reply.status(400).send({
       error: 'Error processing the file',
+      message: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+};
+
+const updateInvoiceInAnalysis = async (
+  request: FastifyRequest<{
+    Params: { analysisId: string; invoiceIndex: string };
+    Body: {
+      date?: string;
+      description?: string;
+      value?: number;
+      category?: string;
+    };
+  }>,
+  reply: FastifyReply,
+) => {
+  const { params, body } = request;
+  const analysisId = mongooseIdDTO({ id: params.analysisId });
+  const invoiceIndex = parseInt(params.invoiceIndex, 10);
+
+  if (isNaN(invoiceIndex) || invoiceIndex < 0) {
+    return reply.status(400).send({ error: 'Invalid invoice index' });
+  }
+
+  try {
+    const updatedAnalysis = await invoicesService.updateInvoiceInAnalysis(
+      analysisId,
+      invoiceIndex,
+      body,
+    );
+
+    return reply.send(updatedAnalysis);
+  } catch (err) {
+    return reply.status(400).send({
+      error: 'Error updating invoice in analysis',
       message: err instanceof Error ? err.message : 'Unknown error',
     });
   }
@@ -140,4 +178,5 @@ export default {
   deleteAll,
   uploadCsv,
   uploadPdf,
+  updateInvoiceInAnalysis,
 };

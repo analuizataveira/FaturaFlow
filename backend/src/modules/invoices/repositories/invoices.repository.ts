@@ -11,10 +11,7 @@ const create = async (invoice: Omit<Invoice, 'id'>): Promise<Invoice> => {
 };
 
 const findById = async (id: string): Promise<Invoice | null> => {
-  const invoice = await InvoiceModel.findOne({
-    _id: id,
-    isDeleted: false,
-  }).lean();
+  const invoice = await InvoiceModel.findById(id).lean();
 
   if (!invoice) {
     return null;
@@ -27,10 +24,7 @@ const findById = async (id: string): Promise<Invoice | null> => {
 };
 
 const findAll = async (filter: FilterQuery<Invoice> = {}): Promise<Invoice[]> => {
-  const invoices = await InvoiceModel.find({
-    ...filter,
-    isDeleted: false,
-  }).lean();
+  const invoices = await InvoiceModel.find(filter).lean();
 
   return invoices.map((invoice) => ({
     ...invoice,
@@ -43,7 +37,7 @@ const findByUserId = async (userId: string): Promise<Invoice[]> => {
 };
 
 const update = async (id: string, data: Partial<Invoice>): Promise<Invoice | null> => {
-  const updatedInvoice = await InvoiceModel.findOneAndUpdate({ _id: id, isDeleted: false }, data, {
+  const updatedInvoice = await InvoiceModel.findByIdAndUpdate(id, data, {
     new: true,
   }).lean();
 
@@ -67,6 +61,38 @@ const removeAllByUserId = async (userId: string): Promise<boolean> => {
   return result.deletedCount > 0;
 };
 
+const updateInvoiceInArray = async (
+  analysisId: string,
+  invoiceIndex: number,
+  updateData: {
+    date?: string;
+    description?: string;
+    value?: number;
+    category?: string;
+  },
+): Promise<Invoice | null> => {
+  const updateQuery: Record<string, any> = {};
+
+  Object.keys(updateData).forEach((key) => {
+    updateQuery[`invoices.${invoiceIndex}.${key}`] = updateData[key as keyof typeof updateData];
+  });
+
+  const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+    analysisId,
+    { $set: updateQuery },
+    { new: true },
+  ).lean();
+
+  if (!updatedInvoice) {
+    return null;
+  }
+
+  return {
+    ...updatedInvoice,
+    id: updatedInvoice._id.toString(),
+  } as Invoice;
+};
+
 export default {
   create,
   findById,
@@ -75,4 +101,5 @@ export default {
   update,
   remove,
   removeAllByUserId,
+  updateInvoiceInArray,
 };

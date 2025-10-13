@@ -6,7 +6,14 @@ export type Invoice = {
   category: string;
   payment: string;
   userId: string;
-  isDeleted?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
+  // Campos para análise (CSV/PDF)
+  invoiceName?: string;
+  invoices?: Array<{
+    date: string;
+    description: string;
+    value: number;
+    category: string;
+  }>;
 };
