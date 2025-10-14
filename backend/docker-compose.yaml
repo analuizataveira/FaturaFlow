@@ -1,6 +1,7 @@
 version: "3"
 services:
   mongo:
+    container_name: faturaflow_db
     image: mongo:6.0
     environment:
       MONGO_INITDB_DATABASE: faturaflow
@@ -12,6 +13,7 @@ services:
       - mongo_data:/data/db
 
   mongo-express:
+    container_name: faturaflow_mongo_express
     image: mongo-express
     ports:
       - "8081:8081"
