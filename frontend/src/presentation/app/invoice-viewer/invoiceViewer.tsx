@@ -400,8 +400,8 @@ export default function InvoiceViewer() {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {analyses.filter(analysis => analysis._id).map((analysis) => {
-              // Calcular valor total e número de transações
-              const totalValue = analysis.value || 0;
+              // Calcular valor total dinamicamente baseado nas transações atuais
+              const totalValue = analysis.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
               const transactionsCount = analysis.invoices?.length || 0;
               
               console.log('🔍 [InvoiceViewer] Análise individual:', {

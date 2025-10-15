@@ -66,7 +66,8 @@ export default function AnalysisDetails() {
   // As transações estão diretamente no campo invoices da análise
   const transactionsToUse = analysis?.invoices || [];
   
-  const totalAmount = analysis?.value || 0;
+  // Calcular o valor total dinamicamente baseado nas transações atuais
+  const totalAmount = transactionsToUse.reduce((sum, transaction) => sum + transaction.value, 0);
   const transactionsCount = transactionsToUse.length;
   
   // Debug: verificar dados da análise
@@ -116,11 +117,16 @@ export default function AnalysisDetails() {
         const updatedInvoices = analysis.invoices.map(inv => 
           inv._id === editingTransaction._id ? updatedTransaction : inv
         );
+        
+        // Recalcular o valor total baseado nas transações atualizadas
+        const newTotalValue = updatedInvoices.reduce((sum, inv) => sum + inv.value, 0);
+        
         setAnalysis({
           ...analysis,
-          invoices: updatedInvoices
+          invoices: updatedInvoices,
+          value: newTotalValue
         });
-        console.log('✅ [AnalysisDetails] Atualizado analysis.invoices');
+        console.log('✅ [AnalysisDetails] Atualizado analysis.invoices e valor total:', newTotalValue);
       }
 
       // Atualizar transação selecionada se for a mesma
@@ -160,11 +166,16 @@ export default function AnalysisDetails() {
       // Atualizar estado local após sucesso da API
       if (analysis && analysis.invoices) {
         const updatedInvoices = analysis.invoices.filter(inv => inv._id !== transactionId);
+        
+        // Recalcular o valor total baseado nas transações restantes
+        const newTotalValue = updatedInvoices.reduce((sum, inv) => sum + inv.value, 0);
+        
         setAnalysis({
           ...analysis,
-          invoices: updatedInvoices
+          invoices: updatedInvoices,
+          value: newTotalValue
         });
-        console.log('✅ [AnalysisDetails] Removido de analysis.invoices');
+        console.log('✅ [AnalysisDetails] Removido de analysis.invoices e valor total atualizado:', newTotalValue);
       }
 
       // Limpar transação selecionada se for a mesma que foi excluída

@@ -66,7 +66,18 @@ export default function HistoryPage() {
                 });
                 
                 setInvoices(allInvoices);
-                setTotalAmount(data.totalAmount);
+                
+                // Calcular valor total dinamicamente baseado nas transações atuais
+                const calculatedTotal = allInvoices.reduce((sum, invoice) => {
+                    // Para análises (PDF/CSV), somar as transações internas
+                    if (invoice.invoices && invoice.invoices.length > 0) {
+                        return sum + invoice.invoices.reduce((invoiceSum, inv) => invoiceSum + inv.value, 0);
+                    }
+                    // Para transações regulares, somar o valor direto
+                    return sum + invoice.value;
+                }, 0);
+                
+                setTotalAmount(calculatedTotal);
             } catch (err) {
                 console.error('Erro ao buscar faturas:', err);
                 setError('Erro ao carregar histórico');
@@ -156,7 +167,16 @@ export default function HistoryPage() {
                     <CardContent>
                         <div className="text-2xl font-bold text-primary">R$ {totalAmount.toFixed(2)}</div>
                         <p className="text-xs text-muted-foreground">
-                            {filteredInvoices.length} {filteredInvoices.length === 1 ? 'transação' : 'transações'}
+                            {(() => {
+                                // Calcular total de transações incluindo análises
+                                const regularTransactions = filteredInvoices.length;
+                                const analysisTransactions = pdfAnalyses.reduce((sum, analysis) => 
+                                    sum + (analysis.invoices?.length || 0), 0
+                                );
+                                const totalTransactions = regularTransactions + analysisTransactions;
+                                
+                                return `${totalTransactions} ${totalTransactions === 1 ? 'transação' : 'transações'}`;
+                            })()}
                         </p>
                     </CardContent>
                 </Card>
@@ -328,7 +348,7 @@ export default function HistoryPage() {
                                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                                                 <span className="font-medium">Valor Total:</span>
                                                 <span className="text-lg font-bold text-primary">
-                                                    R$ {analysis.value.toFixed(2)}
+                                                    R$ {(analysis.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0).toFixed(2)}
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">

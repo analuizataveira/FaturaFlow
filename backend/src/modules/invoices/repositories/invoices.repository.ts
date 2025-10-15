@@ -132,10 +132,29 @@ const updateTransactionInAnalysis = async (
       return null;
     }
 
-    console.log('✅ [InvoicesRepository] Transação atualizada no banco');
+    // Recalcular o valor total baseado nas transações atualizadas
+    const newTotalValue = updatedInvoice.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
+    
+    // Atualizar o valor total da análise
+    const finalInvoice = await InvoiceModel.findByIdAndUpdate(
+      analysisId,
+      { value: newTotalValue },
+      { new: true }
+    ).lean();
+
+    if (!finalInvoice) {
+      console.error('❌ [InvoicesRepository] Erro ao atualizar valor total da análise:', analysisId);
+      return null;
+    }
+
+    console.log('✅ [InvoicesRepository] Transação atualizada e valor total recalculado:', {
+      newTotalValue,
+      totalTransactions: updatedInvoice.invoices?.length || 0
+    });
+
     return {
-      ...updatedInvoice,
-      id: updatedInvoice._id.toString(),
+      ...finalInvoice,
+      id: finalInvoice._id.toString(),
     } as Invoice;
   } catch (error) {
     console.error('❌ [InvoicesRepository] Erro ao atualizar transação:', {
@@ -173,10 +192,29 @@ const deleteTransactionFromAnalysis = async (
       return null;
     }
 
-    console.log('✅ [InvoicesRepository] Transação excluída do banco');
+    // Recalcular o valor total baseado nas transações restantes
+    const newTotalValue = updatedInvoice.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
+    
+    // Atualizar o valor total da análise
+    const finalInvoice = await InvoiceModel.findByIdAndUpdate(
+      analysisId,
+      { value: newTotalValue },
+      { new: true }
+    ).lean();
+
+    if (!finalInvoice) {
+      console.error('❌ [InvoicesRepository] Erro ao atualizar valor total da análise:', analysisId);
+      return null;
+    }
+
+    console.log('✅ [InvoicesRepository] Transação excluída e valor total recalculado:', {
+      newTotalValue,
+      remainingTransactions: updatedInvoice.invoices?.length || 0
+    });
+
     return {
-      ...updatedInvoice,
-      id: updatedInvoice._id.toString(),
+      ...finalInvoice,
+      id: finalInvoice._id.toString(),
     } as Invoice;
   } catch (error) {
     console.error('❌ [InvoicesRepository] Erro ao excluir transação:', {
