@@ -60,25 +60,36 @@ export class InvoiceRepository extends BaseRepository {
             throw new Error('Erro ao buscar faturas. Por favor, verifique os dados informados.');
         }
 
-        const data: InvoicesResponse = response.data;
+        const data = response.data;
 
-        // Separar faturas regulares das análises de PDF
+        // A nova API retorna análises separadas
         const regularInvoices: Invoice[] = [];
         const analysisInvoices: Invoice[] = [];
 
+        // Processar transações regulares (categorias)
         for (const category of Object.values(data.categories)) {
-            if (category && category.details) {
-                for (const invoice of category.details) {
-                    if (invoice.invoiceName) {
-                        // É uma análise de PDF (fatura principal)
-                        analysisInvoices.push(invoice);
-                    } else {
-                        // É uma transação individual
-                        regularInvoices.push(invoice);
-                    }
-                }
+            if (category && (category as CategoryDetails).details) {
+                regularInvoices.push(...(category as CategoryDetails).details);
             }
         }
+
+        // Processar análises (CSV e PDF)
+        if (data.analyses) {
+            if (data.analyses.CSV) {
+                analysisInvoices.push(...data.analyses.CSV);
+            }
+            if (data.analyses.PDF) {
+                analysisInvoices.push(...data.analyses.PDF);
+            }
+        }
+
+        console.log('🔍 [InvoiceRepository] Dados processados:', {
+            regularInvoicesCount: regularInvoices.length,
+            analysisInvoicesCount: analysisInvoices.length,
+            totalAmount: data.totalAmount,
+            analysesCSV: data.analyses?.CSV?.length || 0,
+            analysesPDF: data.analyses?.PDF?.length || 0
+        });
 
         return {
             regularInvoices,

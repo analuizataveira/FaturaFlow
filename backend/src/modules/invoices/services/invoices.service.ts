@@ -25,26 +25,19 @@ const findByUserId = async (
 ): Promise<{
   totalAmount: number;
   categories: Record<string, { totalAmount: number; details: Invoice[] }>;
+  analyses: {
+    CSV: Invoice[];
+    PDF: Invoice[];
+  };
 }> => {
-  console.log('🔍 [InvoicesService] Buscando faturas para userId:', userId);
   
   const invoices = await invoicesRepository.findByUserId(userId);
   
-  console.log('🔍 [InvoicesService] Faturas encontradas:', {
-    totalCount: invoices.length,
-    invoices: invoices.map(inv => ({
-      id: inv.id,
-      description: inv.description,
-      value: inv.value,
-      category: inv.category,
-      hasInvoiceName: !!inv.invoiceName,
-      hasInvoices: !!inv.invoices
-    }))
-  });
+  // Separar transações regulares das análises
+  const regularInvoices = invoices.filter((invoice) => !invoice.invoiceName || !invoice.invoices);
+  const analysisInvoices = invoices.filter((invoice) => invoice.invoiceName && invoice.invoices);
 
-  // Include all invoices, including analysis documents
-  const regularInvoices = invoices;
-
+  // Processar transações regulares
   const result = regularInvoices.reduce(
     (acc, invoice) => {
       acc.totalAmount = parseFloat((acc.totalAmount + invoice.value).toFixed(2));
@@ -66,13 +59,17 @@ const findByUserId = async (
     },
   );
 
-  console.log('🔍 [InvoicesService] Resultado final:', {
-    totalAmount: result.totalAmount,
-    categoriesCount: Object.keys(result.categories).length,
-    categories: Object.keys(result.categories)
-  });
+  // Separar análises por tipo
+  const csvAnalyses = analysisInvoices.filter(analysis => analysis.category === 'Análise CSV');
+  const pdfAnalyses = analysisInvoices.filter(analysis => analysis.category === 'Análise PDF');
 
-  return result;
+  return {
+    ...result,
+    analyses: {
+      CSV: csvAnalyses,
+      PDF: pdfAnalyses
+    }
+  };
 };
 
 const update = async (id: string, data: Omit<Invoice, 'id'>): Promise<Invoice> => {
@@ -182,7 +179,6 @@ const uploadPdf = async (
     const pdfData = await pdf(file);
     const text = pdfData.text;
 
-    // Envia o texto para o ChatGPT processar
     const chatGptResponse = await chatGptService.processNubankTransactions(text, userId);
 
     let imported = 0;
@@ -194,33 +190,36 @@ const uploadPdf = async (
       category: string;
     }> = [];
 
-    // Processa as transações e salva cada uma como fatura individual
-    const savedInvoices: Invoice[] = [];
+    // Processa as transações (igual ao CSV - não salva individualmente)
     for (const invoiceData of chatGptResponse.transactions) {
       try {
-        const invoiceToSave: Omit<Invoice, 'id'> = {
+        // Adicionar à lista de transações processadas para a análise
+        processedInvoices.push({
           date: invoiceData.date,
           description: invoiceData.description,
           value: invoiceData.value,
           category: invoiceData.category,
-          payment: 'Cartão de Crédito',
-          userId,
-        };
-
-        const savedInvoice = await invoicesRepository.create(invoiceToSave);
-        savedInvoices.push(savedInvoice);
+        });
+        
         imported++;
       } catch (error) {
-        console.error('Error processing invoice:', error);
+        console.error('Erro ao processar invoice:', error);
         errors++;
       }
     }
 
-    // Criar documento de análise para referência
+    const totalValue = processedInvoices.reduce((sum, inv) => sum + inv.value, 0);
+    
+    console.log('🔍 [InvoicesService] Criando análise PDF:', {
+      processedInvoicesCount: processedInvoices.length,
+      totalValue,
+      processedInvoices: processedInvoices.slice(0, 3) // Mostrar apenas as primeiras 3 para debug
+    });
+    
     const analysisDocument: Omit<Invoice, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       description: `Análise PDF: ${invoiceName || 'Upload PDF'}`,
-      value: processedInvoices.reduce((sum, inv) => sum + inv.value, 0),
+      value: totalValue,
       category: 'Análise PDF',
       payment: 'Cartão de Crédito',
       userId,
