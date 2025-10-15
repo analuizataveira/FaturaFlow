@@ -20,5 +20,10 @@ export interface Invoice {
   value: number; 
   category: string;
   payment: string;
-  userId: string; 
+  userId: string;
+  // Propriedades para análises de PDF
+  invoiceName?: string;
+  invoices?: Invoice[];
+  createdAt?: string;
+  updatedAt?: string;
 }

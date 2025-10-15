@@ -1,4 +1,9 @@
 import { Invoice, InvoicesResponse, CsvUploadResponse } from "@/domain/interfaces/Invoice";
+
+interface CategoryDetails {
+  totalAmount: number;
+  details: Invoice[];
+}
 import { BaseRepository } from "../base";
 
 export class InvoiceRepository extends BaseRepository {
@@ -44,6 +49,45 @@ export class InvoiceRepository extends BaseRepository {
         return invoicesArray;
     }
 
+    async getInvoicesByUserIdWithStructure(userId: string): Promise<{
+        regularInvoices: Invoice[];
+        analysisInvoices: Invoice[];
+        totalAmount: number;
+        categories: Record<string, CategoryDetails>;
+    }> {
+        const response = await this.httpClient.get(`${this.path}/users/${userId}`);
+        if (!response || !response.data) {
+            throw new Error('Erro ao buscar faturas. Por favor, verifique os dados informados.');
+        }
+
+        const data: InvoicesResponse = response.data;
+
+        // Separar faturas regulares das análises de PDF
+        const regularInvoices: Invoice[] = [];
+        const analysisInvoices: Invoice[] = [];
+
+        for (const category of Object.values(data.categories)) {
+            if (category && category.details) {
+                for (const invoice of category.details) {
+                    if (invoice.invoiceName) {
+                        // É uma análise de PDF (fatura principal)
+                        analysisInvoices.push(invoice);
+                    } else {
+                        // É uma transação individual
+                        regularInvoices.push(invoice);
+                    }
+                }
+            }
+        }
+
+        return {
+            regularInvoices,
+            analysisInvoices,
+            totalAmount: data.totalAmount,
+            categories: data.categories
+        };
+    }
+
     async editInvoice(invoice: Invoice) {
         const response = await this.httpClient.patch(`${this.path}/${invoice._id}`, invoice);
         if (!response || !response.data) {
@@ -81,17 +125,82 @@ export class InvoiceRepository extends BaseRepository {
         const formData = new FormData();
         formData.append("file", file);
 
-        const response = await this.httpClient.post(`${this.path}/upload/pdf/users/${userId}`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        });
+        try {
+            const response = await this.httpClient.post(`${this.path}/upload/pdf/users/${userId}`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
 
-        if (!response || !response.data.success) {
-            throw new Error('Erro ao fazer upload do PDF. Por favor, verifique o arquivo.');
+            if (!response || !response.data.success) {
+                throw new Error('Erro ao fazer upload do PDF. Por favor, verifique o arquivo.');
+            }
+
+            return response.data;
+        } catch (error) {
+            console.error('❌ [InvoiceRepository] Erro no upload:', {
+                error: error instanceof Error ? error.message : error,
+                stack: error instanceof Error ? error.stack : undefined,
+                userId,
+                fileName: file.name
+            });
+            throw error;
         }
+    }
 
-        return response.data;
+    async updateTransactionInAnalysis(analysisId: string, transactionId: string, updateData: {
+        description: string;
+        value: number;
+        category: string;
+    }): Promise<any> {
+        try {
+            const response = await this.httpClient.patch(
+                `${this.path}/analysis/${analysisId}/transaction/${transactionId}`,
+                updateData
+            );
+
+            return response.data;
+        } catch (error) {
+            console.error('❌ [InvoiceRepository] Erro ao atualizar transação:', {
+                error: error instanceof Error ? error.message : error,
+                analysisId,
+                transactionId
+            });
+            throw error;
+        }
+    }
+
+    async deleteTransactionFromAnalysis(analysisId: string, transactionId: string): Promise<any> {
+        try {
+            const response = await this.httpClient.delete(
+                `${this.path}/analysis/${analysisId}/transaction/${transactionId}`
+            );
+
+            return response.data;
+        } catch (error) {
+            console.error('❌ [InvoiceRepository] Erro ao excluir transação:', {
+                error: error instanceof Error ? error.message : error,
+                analysisId,
+                transactionId
+            });
+            throw error;
+        }
+    }
+
+    async getAnalysisById(analysisId: string): Promise<Invoice | null> {
+        try {
+            const response = await this.httpClient.get(`${this.path}/analysis/${analysisId}`);
+            if (!response || !response.data) {
+                return null;
+            }
+            return response.data;
+        } catch (error) {
+            console.error('❌ [InvoiceRepository] Erro ao buscar análise:', {
+                error: error instanceof Error ? error.message : error,
+                analysisId
+            });
+            throw error;
+        }
     }
 
 }

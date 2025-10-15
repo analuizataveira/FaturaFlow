@@ -56,7 +56,7 @@ const PdfUploader = ({ userId, onUploadSuccess }: PdfUploaderProps) => {
     }
 
     setLoading(true);
-    setMessage("");
+    setMessage("Processando PDF... Isso pode levar alguns minutos.");
 
     try {
       const result = await repository.invoice.uploadPdfInvoices(userId, file);
@@ -69,9 +69,26 @@ const PdfUploader = ({ userId, onUploadSuccess }: PdfUploaderProps) => {
 
       onUploadSuccess?.();
     } catch (error) {
-      setMessage(
-        `Erro: ${error instanceof Error ? error.message : "Erro desconhecido"}`
-      );
+      console.error('❌ [PdfUploader] Erro no upload:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined,
+        userId,
+        fileName: file.name
+      });
+
+      let errorMessage = "Erro desconhecido";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          errorMessage = "Timeout: O processamento do PDF está demorando mais que o esperado. Tente novamente com um arquivo menor ou mais simples.";
+        } else if (error.message.includes('Network Error')) {
+          errorMessage = "Erro de conexão: Verifique sua internet e tente novamente.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setMessage(`Erro: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

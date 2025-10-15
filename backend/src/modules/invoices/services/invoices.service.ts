@@ -26,10 +26,24 @@ const findByUserId = async (
   totalAmount: number;
   categories: Record<string, { totalAmount: number; details: Invoice[] }>;
 }> => {
+  console.log('🔍 [InvoicesService] Buscando faturas para userId:', userId);
+  
   const invoices = await invoicesRepository.findByUserId(userId);
+  
+  console.log('🔍 [InvoicesService] Faturas encontradas:', {
+    totalCount: invoices.length,
+    invoices: invoices.map(inv => ({
+      id: inv.id,
+      description: inv.description,
+      value: inv.value,
+      category: inv.category,
+      hasInvoiceName: !!inv.invoiceName,
+      hasInvoices: !!inv.invoices
+    }))
+  });
 
-  // Filter out analysis documents (CSV and PDF analyses)
-  const regularInvoices = invoices.filter((invoice) => !invoice.invoiceName || !invoice.invoices);
+  // Include all invoices, including analysis documents
+  const regularInvoices = invoices;
 
   const result = regularInvoices.reduce(
     (acc, invoice) => {
@@ -51,6 +65,12 @@ const findByUserId = async (
       categories: {} as Record<string, { totalAmount: number; details: Invoice[] }>,
     },
   );
+
+  console.log('🔍 [InvoicesService] Resultado final:', {
+    totalAmount: result.totalAmount,
+    categoriesCount: Object.keys(result.categories).length,
+    categories: Object.keys(result.categories)
+  });
 
   return result;
 };
@@ -174,15 +194,21 @@ const uploadPdf = async (
       category: string;
     }> = [];
 
-    // Processa as transações
+    // Processa as transações e salva cada uma como fatura individual
+    const savedInvoices: Invoice[] = [];
     for (const invoiceData of chatGptResponse.transactions) {
       try {
-        processedInvoices.push({
+        const invoiceToSave: Omit<Invoice, 'id'> = {
           date: invoiceData.date,
           description: invoiceData.description,
           value: invoiceData.value,
           category: invoiceData.category,
-        });
+          payment: 'Cartão de Crédito',
+          userId,
+        };
+
+        const savedInvoice = await invoicesRepository.create(invoiceToSave);
+        savedInvoices.push(savedInvoice);
         imported++;
       } catch (error) {
         console.error('Error processing invoice:', error);
@@ -190,7 +216,7 @@ const uploadPdf = async (
       }
     }
 
-    // Criar documento de análise
+    // Criar documento de análise para referência
     const analysisDocument: Omit<Invoice, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       description: `Análise PDF: ${invoiceName || 'Upload PDF'}`,
@@ -276,6 +302,57 @@ const updateInvoiceInAnalysis = async (
   return updatedAnalysis;
 };
 
+const updateTransactionInAnalysis = async (
+  analysisId: string,
+  transactionId: string,
+  updateData: {
+    description: string;
+    value: number;
+    category: string;
+  },
+) => {
+  console.log('📝 [InvoicesService] Atualizando transação na análise:', {
+    analysisId,
+    transactionId,
+    updateData
+  });
+
+  const updatedAnalysis = await invoicesRepository.updateTransactionInAnalysis(
+    analysisId,
+    transactionId,
+    updateData,
+  );
+
+  if (!updatedAnalysis) {
+    throw new NotFoundError('Erro ao atualizar transação na análise');
+  }
+
+  console.log('✅ [InvoicesService] Transação atualizada com sucesso');
+  return updatedAnalysis;
+};
+
+const deleteTransactionFromAnalysis = async (
+  analysisId: string,
+  transactionId: string,
+) => {
+  console.log('🗑️ [InvoicesService] Excluindo transação da análise:', {
+    analysisId,
+    transactionId
+  });
+
+  const updatedAnalysis = await invoicesRepository.deleteTransactionFromAnalysis(
+    analysisId,
+    transactionId,
+  );
+
+  if (!updatedAnalysis) {
+    throw new NotFoundError('Erro ao excluir transação da análise');
+  }
+
+  console.log('✅ [InvoicesService] Transação excluída com sucesso');
+  return updatedAnalysis;
+};
+
 export default {
   create,
   findById,
@@ -291,4 +368,6 @@ export default {
   getPdfAnalyses,
   getAnalysis,
   updateInvoiceInAnalysis,
+  updateTransactionInAnalysis,
+  deleteTransactionFromAnalysis,
 };

@@ -1,13 +1,18 @@
-import { useEffect, useState } from 'react';
-import { Invoice } from '@/domain/interfaces/Invoice';
 import { InvoiceRepository } from '@/data/repositories/invoice';
-import AnalysisResults from './components/analysis-results';
-import { Edit, Trash2, BarChart3, Loader2, Receipt, DollarSign, Calendar, Tag, CreditCard, FileText, AlertCircle, TrendingUp } from 'lucide-react';
+import { Invoice } from '@/domain/interfaces/Invoice';
 import { Button } from '@/presentation/components';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
+import { AlertCircle, Calendar, CreditCard, DollarSign, Edit, FileSearch, FileText, Loader2, Receipt, Tag, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Pie } from 'react-chartjs-2';
+import AnalysisResults from './components/analysis-results';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 export default function InvoiceViewer() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [analyses, setAnalyses] = useState<Invoice[]>([]);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<Invoice>>({});
@@ -15,14 +20,17 @@ export default function InvoiceViewer() {
   const [error, setError] = useState<string | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'invoices' | 'analyses'>('invoices');
+  const [savedAnalyses, setSavedAnalyses] = useState<any[]>(() => {
+    const saved = localStorage.getItem('savedAnalyses');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const [user] = useState(() => {
     const userData = localStorage.getItem('session');
     return userData ? JSON.parse(userData) : null;
   });
   const invoiceRepository = new InvoiceRepository();
-
-
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -35,12 +43,27 @@ export default function InvoiceViewer() {
       try {
         setIsLoading(true);
         setError(null);
-        const invoicesData = await invoiceRepository.getInvoicesByUserId(user.id);
-        setInvoices(invoicesData);
+        const data = await invoiceRepository.getInvoicesByUserIdWithStructure(user.id);
+        
+        console.log('🔍 [InvoiceViewer] Dados carregados:', {
+          regularInvoices: data.regularInvoices.length,
+          analysisInvoicesCount: data.analysisInvoices.length,
+          analysisInvoices: data.analysisInvoices.map(analysis => ({
+            id: analysis._id,
+            value: analysis.value,
+            invoiceName: analysis.invoiceName,
+            invoicesCount: analysis.invoices?.length || 0,
+            category: analysis.category
+          }))
+        });
+        
+        setInvoices(data.regularInvoices);
+        setAnalyses(data.analysisInvoices);
       } catch (err) {
         console.error('Erro ao buscar faturas:', err);
         setError('Erro ao carregar faturas');
         setInvoices([]);
+        setAnalyses([]);
       } finally {
         setIsLoading(false);
       }
@@ -115,6 +138,12 @@ export default function InvoiceViewer() {
     }
   };
 
+  const deleteAnalysis = (id: string) => {
+    const updatedAnalyses = savedAnalyses.filter(analysis => analysis.id !== id);
+    setSavedAnalyses(updatedAnalyses);
+    localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -124,22 +153,34 @@ export default function InvoiceViewer() {
     );
   }
 
-  const totalAmount = invoices.reduce((sum, inv) => sum + inv.value, 0);
-
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Suas Despesas</h1>
-          <p className="text-muted-foreground mt-1">Gerencie e acompanhe todos os seus gastos</p>
+          <h1 className="text-3xl font-bold tracking-tight">Suas Faturas</h1>
+          <p className="text-muted-foreground mt-1">Gerencie e acompanhe todas as suas faturas</p>
         </div>
-        {invoices.length > 0 && (
-          <Button onClick={() => setShowAnalysis(true)} size="lg" className="gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Gerar Análise
-          </Button>
-        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
+        <Button
+          variant={activeTab === 'invoices' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('invoices')}
+          className="gap-2"
+        >
+          <FileSearch className="h-4 w-4" />
+          Faturas ({analyses.length})
+        </Button>
+        <Button
+          variant={activeTab === 'analyses' ? 'default' : 'ghost'}
+          onClick={() => setActiveTab('analyses')}
+          className="gap-2"
+        >
+          <Receipt className="h-4 w-4" />
+          Análises ({savedAnalyses.length})
+        </Button>
       </div>
 
       {/* Error Alert */}
@@ -159,45 +200,6 @@ export default function InvoiceViewer() {
         </Card>
       )}
 
-      {/* Stats Cards */}
-      {invoices.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Despesas</CardTitle>
-              <Receipt className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{invoices.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {invoices.length === 1 ? "despesa registrada" : "despesas registradas"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">R$ {totalAmount.toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Soma de todas as despesas</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Média por Despesa</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">R$ {(totalAmount / invoices.length).toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Valor médio gasto</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Analysis Modal */}
       {showAnalysis && (
@@ -381,76 +383,160 @@ export default function InvoiceViewer() {
       )}
 
       {/* Main Content */}
-      {invoices.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16">
-            <div className="rounded-full bg-muted p-6 mb-4">
-              <Receipt className="h-12 w-12 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-semibold mb-2">Nenhuma despesa registrada</h3>
-            <p className="text-muted-foreground text-center max-w-md">
-              Suas despesas aparecerão aqui quando forem adicionadas ao sistema. Comece registrando sua primeira
-              despesa!
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Lista de Despesas</CardTitle>
-            <CardDescription>Clique em uma despesa para ver mais detalhes e opções</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {invoices.map((invoice) => (
-                <Card
-                  key={invoice._id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${
-                    selectedInvoice?._id === invoice._id ? "border-primary shadow-md" : "hover:border-primary/50"
-                  }`}
-                  onClick={() => {
-                    setSelectedInvoice(invoice);
-                    setEditingInvoice(null);
-                  }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-background text-foreground gap-1">
-                            <Tag className="h-3 w-3" />
-                            {invoice.category}
-                          </span>
-                          <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(invoice.date).toLocaleDateString("pt-BR", {
-                              timeZone: "UTC",
-                            })}
-                          </span>
+      {activeTab === 'invoices' ? (
+        // Faturas Tab (Análises de PDF)
+        analyses.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="rounded-full bg-muted p-6 mb-4">
+                <FileSearch className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Nenhuma fatura encontrada</h3>
+              <p className="text-muted-foreground text-center max-w-md">
+                Suas faturas de PDF aparecerão aqui quando forem processadas. Faça upload de um PDF para começar!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {analyses.filter(analysis => analysis._id).map((analysis) => {
+              // Calcular valor total e número de transações
+              const totalValue = analysis.value || 0;
+              const transactionsCount = analysis.invoices?.length || 0;
+              
+              console.log('🔍 [InvoiceViewer] Análise individual:', {
+                id: analysis._id,
+                value: analysis.value,
+                invoicesCount: analysis.invoices?.length,
+                totalValue,
+                transactionsCount
+              });
+              
+              return (
+                <Card key={analysis._id} className="hover:shadow-lg transition-all cursor-pointer hover:border-primary">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-primary" />
+                      {analysis.invoiceName || 'Análise de PDF'}
+                    </CardTitle>
+                    <CardDescription>
+                      Processada em {new Date(analysis.date).toLocaleDateString('pt-BR')}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Valor Total:</span>
                         </div>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <p className="font-medium flex items-center gap-2">
-                              <FileText className="h-4 w-4 text-muted-foreground" />
-                              {invoice.description}
-                            </p>
-                            <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                              <CreditCard className="h-3 w-3" />
-                              {invoice.payment}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-2xl font-bold text-primary">R$ {invoice.value.toFixed(2)}</p>
-                          </div>
-                        </div>
+                        <span className="text-lg font-bold text-primary">
+                          R$ {totalValue.toFixed(2)}
+                        </span>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Receipt className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Transações:</span>
+                        </div>
+                        <span className="font-semibold">{transactionsCount}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Categoria:</span>
+                        </div>
+                        <span className="text-sm bg-secondary px-2 py-1 rounded-full">
+                          {analysis.category}
+                        </span>
+                      </div>
+                    </div>
+                  
+                    <div className="mt-4 pt-4 border-t">
+                      <Button 
+                        variant="outline" 
+                        className="w-full gap-2"
+                        onClick={() => {
+                          // Navegar para detalhes da análise
+                          window.location.href = `/analysis-details/${analysis._id}`;
+                        }}
+                      >
+                        <FileText className="h-4 w-4" />
+                        Ver Detalhes
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        // Análises Tab
+        savedAnalyses.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16">
+              <div className="rounded-full bg-muted p-6 mb-4">
+                <FileSearch className="h-12 w-12 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Nenhuma análise salva</h3>
+              <p className="text-muted-foreground text-center max-w-md">
+                Suas análises salvas aparecerão aqui. Gere uma análise para começar!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {savedAnalyses.map((analysis) => (
+              <Card key={analysis.id} className="hover:shadow-lg transition-shadow">
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-lg">
+                      Análise de {new Date(analysis.date).toLocaleDateString('pt-BR')}
+                    </CardTitle>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteAnalysis(analysis.id)}
+                      className="gap-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Total: R$ {analysis.totalAmount.toFixed(2)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-40 mb-4">
+                    <Pie 
+                      data={analysis.chartData} 
+                      options={{ 
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'bottom'
+                          }
+                        }
+                      }} 
+                    />
+                  </div>
+                  
+                  <details className="group">
+                    <summary className="cursor-pointer text-sm font-medium hover:text-primary transition-colors">
+                      Ver detalhes da análise
+                    </summary>
+                    <div className="mt-4 p-4 bg-muted rounded-lg">
+                      <p className="whitespace-pre-line text-sm">
+                        {analysis.analysisText}
+                      </p>
+                    </div>
+                  </details>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )
       )}
     </div>
   );

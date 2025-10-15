@@ -7,6 +7,7 @@ import ProtectedRoute from "@/presentation/components/ProtectedRoute";
 import AppLayout from "@/presentation/layout/layout";
 import InvoiceHistory from "@/presentation/app/invoice-history/invoiceHistory";
 import InvoiceViewer from "@/presentation/app/invoice-viewer/invoiceViewer";
+import AnalysisDetails from "@/presentation/app/analysis-details/analysisDetails";
 
 const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
       {
         path: AppRoutes.HISTORY,
         element: <InvoiceHistory />,
+      },
+      {
+        path: AppRoutes.ANALYSIS_DETAILS,
+        element: <AnalysisDetails />,
       },
     ],
   },

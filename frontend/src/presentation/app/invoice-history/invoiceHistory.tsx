@@ -1,11 +1,12 @@
+import { repository } from '@/data/repositories';
+import { Invoice } from '@/domain/interfaces/Invoice';
+import { Button } from '@/presentation/components';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
+import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
+import { AlertCircle, Calendar, DollarSign, Eye, FilePieChart, FileText, Filter, Loader2, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Pie } from 'react-chartjs-2';
-import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
-import { Invoice } from '@/domain/interfaces/Invoice';
-import { repository } from '@/data/repositories';
-import { Calendar, DollarSign, Edit3, FilePieChart, Filter, PieChart, Save, Trash2, X, AlertCircle, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/presentation/components/ui/card';
-import { Button } from '@/presentation/components';
+import { useNavigate } from 'react-router-dom';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -19,12 +20,11 @@ interface SavedAnalysis {
 }
 
 export default function HistoryPage() {
+    const navigate = useNavigate();
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [totalAmount, setTotalAmount] = useState(0);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
     const [filters, setFilters] = useState({
         category: '',
         payment: '',
@@ -70,7 +70,11 @@ export default function HistoryPage() {
         fetchInvoices();
     }, [user]);
 
-    const filteredInvoices = invoices.filter(invoice => {
+    // Separar análises de PDF das faturas regulares
+    const pdfAnalyses = invoices.filter(invoice => invoice.invoiceName && invoice.category === 'Análise PDF');
+    const regularInvoices = invoices.filter(invoice => !invoice.invoiceName);
+
+    const filteredInvoices = regularInvoices.filter(invoice => {
         return (
             (filters.category === '' || invoice.category === filters.category) &&
             (filters.payment === '' || invoice.payment === filters.payment) &&
@@ -93,62 +97,8 @@ export default function HistoryPage() {
       localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
     };
 
-    // Função para deletar uma invoice
-    const handleDeleteInvoice = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir esta despesa?')) {
-            return;
-        }
-
-        try {
-            await repository.invoice.deleteInvoice(id);
-            const updatedInvoices = invoices.filter(invoice => invoice._id !== id);
-            setInvoices(updatedInvoices);
-            setTotalAmount(calculateTotal(updatedInvoices));
-        } catch (error) {
-            console.error('Erro ao deletar fatura:', error);
-            alert('Erro ao excluir despesa. Tente novamente.');
-        }
-    };
-
-    // Função para iniciar edição
-    const startEditing = (invoice: Invoice) => {
-        setEditingId(invoice._id || '');
-        setEditingInvoice({...invoice});
-    };
-
-    // Função para cancelar edição
-    const cancelEditing = () => {
-        setEditingId(null);
-        setEditingInvoice(null);
-    };
-
-    // Função para salvar edição
-    const saveEdit = async () => {
-        if (!editingInvoice) return;
-
-        try {
-            await repository.invoice.editInvoice(editingInvoice);
-            const updatedInvoices = invoices.map(invoice => 
-                invoice._id === editingInvoice._id ? editingInvoice : invoice
-            );
-            setInvoices(updatedInvoices);
-            setTotalAmount(calculateTotal(updatedInvoices));
-            setEditingId(null);
-            setEditingInvoice(null);
-        } catch (error) {
-            console.error('Erro ao editar fatura:', error);
-            alert('Erro ao salvar alterações. Tente novamente.');
-        }
-    };
-
-    // Função para atualizar campos da invoice sendo editada
-    const updateEditingInvoice = (field: string, value: string | number) => {
-        if (!editingInvoice) return;
-        
-        setEditingInvoice({
-            ...editingInvoice,
-            [field]: field === 'value' ? parseFloat(value.toString()) || 0 : value
-        });
+    const handleViewAnalysisDetails = (analysisId: string) => {
+        navigate(`/analysis-details/${analysisId}`);
     };
 
     if (isLoading) {
@@ -280,187 +230,118 @@ export default function HistoryPage() {
                 </CardContent>
             </Card>
 
-            {/* Tabela de Despesas */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Lista de Despesas</CardTitle>
-                    <CardDescription>Gerencie suas despesas com edição inline</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {filteredInvoices.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16">
-                            <div className="rounded-full bg-muted p-6 mb-4">
-                                <PieChart className="h-12 w-12 text-muted-foreground" />
-                            </div>
-                            <h3 className="text-xl font-semibold mb-2">Nenhuma transação encontrada</h3>
-                            <p className="text-muted-foreground text-center max-w-md">
-                                {Object.values(filters).some(Boolean) 
-                                    ? "Nenhuma despesa corresponde aos filtros aplicados."
-                                    : "Nenhuma despesa foi registrada ainda."
-                                }
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b">
-                                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Data</th>
-                                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Descrição</th>
-                                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Valor</th>
-                                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Categoria</th>
-                                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Pagamento</th>
-                                        <th className="text-left py-3 px-4 font-medium text-muted-foreground">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredInvoices.map((invoice) => (
-                                        <tr key={invoice._id} className="border-b hover:bg-muted/50 transition-colors">
-                                            {/* Data */}
-                                            <td className="py-4 px-4">
-                                                {editingId === invoice._id ? (
-                                                    <input
-                                                        type="date"
-                                                        className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                                                        value={editingInvoice?.date || ''}
-                                                        onChange={(e) => updateEditingInvoice('date', e.target.value)}
-                                                    />
-                                                ) : (
-                                                    <div className="flex items-center gap-2">
-                                                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                        {new Date(invoice.date).toLocaleDateString()}
-                                                    </div>
-                                                )}
-                                            </td>
-
-                                            {/* Descrição */}
-                                            <td className="py-4 px-4">
-                                                {editingId === invoice._id ? (
-                                                    <input
-                                                        type="text"
-                                                        className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                                                        value={editingInvoice?.description || ''}
-                                                        onChange={(e) => updateEditingInvoice('description', e.target.value)}
-                                                    />
-                                                ) : (
-                                                    <span className="font-medium">{invoice.description}</span>
-                                                )}
-                                            </td>
-
-                                            {/* Valor */}
-                                            <td className="py-4 px-4 font-medium">
-                                                {editingId === invoice._id ? (
-                                                    <input
-                                                        type="number"
-                                                        step="0.01"
-                                                        className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                                                        value={editingInvoice?.value || 0}
-                                                        onChange={(e) => updateEditingInvoice('value', e.target.value)}
-                                                    />
-                                                ) : (
-                                                    <span className="text-primary font-bold">R$ {invoice.value.toFixed(2)}</span>
-                                                )}
-                                            </td>
-
-                                            {/* Categoria */}
-                                            <td className="py-4 px-4">
-                                                {editingId === invoice._id ? (
-                                                    <select
-                                                        className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                                                        value={editingInvoice?.category || ''}
-                                                        onChange={(e) => updateEditingInvoice('category', e.target.value)}
-                                                    >
-                                                        <option value="Alimentação">Alimentação</option>
-                                                        <option value="Transporte">Transporte</option>
-                                                        <option value="Serviços">Serviços</option>
-                                                        <option value="Saúde">Saúde</option>
-                                                        <option value="Lazer">Lazer</option>
-                                                        <option value="Educação">Educação</option>
-                                                        <option value="Vestuário">Vestuário</option>
-                                                        <option value="Casa e Moradia">Casa e Moradia</option>
-                                                        <option value="Bancos e Finanças">Bancos e Finanças</option>
-                                                        <option value="Outros">Outros</option>
-                                                    </select>
-                                                ) : (
-                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-background text-foreground">
+            {/* Faturas Individuais */}
+            {filteredInvoices.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Faturas Individuais</CardTitle>
+                        <CardDescription>Despesas registradas individualmente</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-3">
+                            {filteredInvoices.map((invoice) => (
+                                <Card key={invoice._id} className="hover:shadow-md transition-all">
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1 space-y-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border border-border bg-background text-foreground gap-1">
                                                         {invoice.category}
                                                     </span>
-                                                )}
-                                            </td>
-
-                                            {/* Pagamento */}
-                                            <td className="py-4 px-4">
-                                                {editingId === invoice._id ? (
-                                                    <select
-                                                        className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
-                                                        value={editingInvoice?.payment || ''}
-                                                        onChange={(e) => updateEditingInvoice('payment', e.target.value)}
-                                                    >
-                                                        <option value="Dinheiro">Dinheiro</option>
-                                                        <option value="Cartão de Crédito">Cartão de Crédito</option>
-                                                        <option value="Cartão de Débito">Cartão de Débito</option>
-                                                        <option value="Pix">Pix</option>
-                                                    </select>
-                                                ) : (
-                                                    <span>{invoice.payment}</span>
-                                                )}
-                                            </td>
-
-                                            {/* Ações */}
-                                            <td className="py-4 px-4">
-                                                <div className="flex gap-2">
-                                                    {editingId === invoice._id ? (
-                                                        <>
-                                                            <Button
-                                                                size="sm"
-                                                                onClick={saveEdit}
-                                                                className="gap-2"
-                                                            >
-                                                                <Save className="h-4 w-4" />
-                                                                Salvar
-                                                            </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={cancelEditing}
-                                                                className="gap-2"
-                                                            >
-                                                                <X className="h-4 w-4" />
-                                                                Cancelar
-                                                            </Button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => startEditing(invoice)}
-                                                                className="gap-2"
-                                                            >
-                                                                <Edit3 className="h-4 w-4" />
-                                                                Editar
-                                                            </Button>
-                                                            <Button
-                                                                variant="destructive"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteInvoice(invoice._id || '')}
-                                                                className="gap-2"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                                Excluir
-                                                            </Button>
-                                                        </>
-                                                    )}
+                                                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                                        <Calendar className="h-3 w-3" />
+                                                        {new Date(invoice.date).toLocaleDateString("pt-BR", {
+                                                            timeZone: "UTC",
+                                                        })}
+                                                    </span>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex-1">
+                                                        <p className="font-medium flex items-center gap-2">
+                                                            <FileText className="h-4 w-4 text-muted-foreground" />
+                                                            {invoice.description}
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                                            {invoice.payment}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-2xl font-bold text-primary">R$ {invoice.value.toFixed(2)}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
                         </div>
-                    )}
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+            )}
+
+            {/* Análises de PDF */}
+            {pdfAnalyses.length > 0 && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-5 w-5" />
+                            Análises de PDF
+                        </CardTitle>
+                        <CardDescription>Análises de documentos PDF processados</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {pdfAnalyses.map((analysis) => (
+                                <Card 
+                                    key={analysis._id} 
+                                    className="hover:shadow-lg transition-all cursor-pointer hover:border-primary"
+                                    onClick={() => analysis._id && handleViewAnalysisDetails(analysis._id)}
+                                >
+                                    <CardHeader>
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <FileText className="h-4 w-4 text-primary" />
+                                            {analysis.invoiceName || 'Análise de PDF'}
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {new Date(analysis.date).toLocaleDateString('pt-BR')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-medium">Valor Total:</span>
+                                                <span className="text-lg font-bold text-primary">
+                                                    R$ {analysis.value.toFixed(2)}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                                <span className="font-medium">Transações:</span>
+                                                <span>{analysis.invoices?.length || 0}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-4 pt-4 border-t">
+                                            <Button 
+                                                variant="outline" 
+                                                className="w-full gap-2"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    analysis._id && handleViewAnalysisDetails(analysis._id);
+                                                }}
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                                Ver Detalhes
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Histórico de Análises */}
             {savedAnalyses.length > 0 && (
