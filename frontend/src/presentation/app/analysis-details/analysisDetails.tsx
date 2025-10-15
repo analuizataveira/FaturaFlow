@@ -63,54 +63,20 @@ export default function AnalysisDetails() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // Se não há transações na análise, buscar todas as transações do usuário
-  // e filtrar apenas as que pertencem a esta análise
-  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  // As transações estão diretamente no campo invoices da análise
+  const transactionsToUse = analysis?.invoices || [];
   
-  // Para análises de PDF, o valor total já está em analysis.value
-  // e as transações estão em analysis.invoices
-  const transactionsToUse = (analysis?.invoices && analysis.invoices.length > 0) 
-    ? analysis.invoices 
-    : allTransactions;
-  
-  const totalAmount = analysis?.value || 
-    (transactionsToUse.length > 0 
-      ? transactionsToUse.reduce((sum, transaction) => sum + (transaction.value || 0), 0)
-      : 0);
-  
+  const totalAmount = analysis?.value || 0;
   const transactionsCount = transactionsToUse.length;
   
-  // Debug: verificar cálculo do valor total
-  console.log('🔍 [AnalysisDetails] Cálculo do valor total:', {
+  // Debug: verificar dados da análise
+  console.log('🔍 [AnalysisDetails] Dados da análise:', {
+    analysisId: analysis?._id,
     analysisValue: analysis?.value,
-    transactionsToUseLength: transactionsToUse.length,
-    calculatedTotal: transactionsToUse.length > 0 
-      ? transactionsToUse.reduce((sum, transaction) => sum + (transaction.value || 0), 0)
-      : 0,
-    finalTotalAmount: totalAmount
+    invoicesLength: analysis?.invoices?.length || 0,
+    totalAmount,
+    transactionsCount
   });
-  
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      if (!analysis?.invoices || analysis.invoices.length === 0) {
-        try {
-          const userData = localStorage.getItem('session');
-          const user = userData ? JSON.parse(userData) : null;
-          
-          if (user?.id) {
-            const data = await invoiceRepository.getInvoicesByUserIdWithStructure(user.id);
-            // Filtrar apenas as transações que não são análises de PDF
-            const regularTransactions = data.regularInvoices;
-            setAllTransactions(regularTransactions);
-          }
-        } catch (err) {
-          console.error('Erro ao buscar transações:', err);
-        }
-      }
-    };
-    
-    fetchTransactions();
-  }, [analysis]);
 
   const handleEditTransaction = async () => {
     if (!editingTransaction?._id || !analysisId) {
@@ -142,12 +108,11 @@ export default function AnalysisDetails() {
       console.log('🔍 [AnalysisDetails] Atualizando estado local:', {
         editingTransactionId: editingTransaction._id,
         updatedTransaction,
-        analysisInvoicesLength: analysis?.invoices?.length || 0,
-        allTransactionsLength: allTransactions.length
+        analysisInvoicesLength: analysis?.invoices?.length || 0
       });
 
-      // Atualizar transações na análise se existirem
-      if (analysis && analysis.invoices && analysis.invoices.length > 0) {
+      // Atualizar transações na análise
+      if (analysis && analysis.invoices) {
         const updatedInvoices = analysis.invoices.map(inv => 
           inv._id === editingTransaction._id ? updatedTransaction : inv
         );
@@ -156,19 +121,6 @@ export default function AnalysisDetails() {
           invoices: updatedInvoices
         });
         console.log('✅ [AnalysisDetails] Atualizado analysis.invoices');
-      } else {
-        // Se não há transações na análise, atualizar allTransactions
-        setAllTransactions(prev => {
-          const updated = prev.map(transaction => 
-            transaction._id === editingTransaction._id ? updatedTransaction : transaction
-          );
-          console.log('✅ [AnalysisDetails] Atualizado allTransactions:', {
-            before: prev.length,
-            after: updated.length,
-            updatedTransaction: updated.find(t => t._id === editingTransaction._id)
-          });
-          return updated;
-        });
       }
 
       // Atualizar transação selecionada se for a mesma
@@ -206,23 +158,13 @@ export default function AnalysisDetails() {
       await invoiceRepository.deleteTransactionFromAnalysis(analysisId, transactionId);
 
       // Atualizar estado local após sucesso da API
-      if (analysis && analysis.invoices && analysis.invoices.length > 0) {
+      if (analysis && analysis.invoices) {
         const updatedInvoices = analysis.invoices.filter(inv => inv._id !== transactionId);
         setAnalysis({
           ...analysis,
           invoices: updatedInvoices
         });
         console.log('✅ [AnalysisDetails] Removido de analysis.invoices');
-      } else {
-        // Se não há transações na análise, atualizar allTransactions
-        setAllTransactions(prev => {
-          const updated = prev.filter(transaction => transaction._id !== transactionId);
-          console.log('✅ [AnalysisDetails] Removido de allTransactions:', {
-            before: prev.length,
-            after: updated.length
-          });
-          return updated;
-        });
       }
 
       // Limpar transação selecionada se for a mesma que foi excluída

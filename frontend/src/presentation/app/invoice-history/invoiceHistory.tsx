@@ -42,9 +42,6 @@ export default function HistoryPage() {
         return userData ? JSON.parse(userData) : null;
     });
 
-    const calculateTotal = (invoices: Invoice[]): number => {
-        return invoices.reduce((sum, invoice) => sum + invoice.value, 0);
-    };
 
     useEffect(() => {
         const fetchInvoices = async () => {
@@ -56,9 +53,20 @@ export default function HistoryPage() {
 
             try {
                 setIsLoading(true);
-                const invoicesData = await repository.invoice.getInvoicesByUserId(user.id);
-                setInvoices(invoicesData);
-                setTotalAmount(calculateTotal(invoicesData));
+                const data = await repository.invoice.getInvoicesByUserIdWithStructure(user.id);
+                
+                // Combinar transações regulares e análises para o histórico
+                const allInvoices = [...data.regularInvoices, ...data.analysisInvoices];
+                
+                console.log('🔍 [InvoiceHistory] Dados carregados:', {
+                    regularInvoices: data.regularInvoices.length,
+                    analysisInvoices: data.analysisInvoices.length,
+                    totalAmount: data.totalAmount,
+                    allInvoices: allInvoices.length
+                });
+                
+                setInvoices(allInvoices);
+                setTotalAmount(data.totalAmount);
             } catch (err) {
                 console.error('Erro ao buscar faturas:', err);
                 setError('Erro ao carregar histórico');
@@ -71,7 +79,10 @@ export default function HistoryPage() {
     }, [user]);
 
     // Separar análises de PDF das faturas regulares
-    const pdfAnalyses = invoices.filter(invoice => invoice.invoiceName && invoice.category === 'Análise PDF');
+    const pdfAnalyses = invoices.filter(invoice => 
+        invoice.invoiceName && 
+        (invoice.category === 'Análise PDF' || invoice.category === 'Análise CSV')
+    );
     const regularInvoices = invoices.filter(invoice => !invoice.invoiceName);
 
     const filteredInvoices = regularInvoices.filter(invoice => {
@@ -279,15 +290,15 @@ export default function HistoryPage() {
                 </Card>
             )}
 
-            {/* Análises de PDF */}
+            {/* Análises de PDF e CSV */}
             {pdfAnalyses.length > 0 && (
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <FileText className="h-5 w-5" />
-                            Análises de PDF
+                            Análises de Documentos
                         </CardTitle>
-                        <CardDescription>Análises de documentos PDF processados</CardDescription>
+                        <CardDescription>Análises de documentos PDF e CSV processados</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -300,10 +311,15 @@ export default function HistoryPage() {
                                     <CardHeader>
                                         <CardTitle className="text-lg flex items-center gap-2">
                                             <FileText className="h-4 w-4 text-primary" />
-                                            {analysis.invoiceName || 'Análise de PDF'}
+                                            {analysis.invoiceName || `Análise de ${analysis.category === 'Análise PDF' ? 'PDF' : 'CSV'}`}
                                         </CardTitle>
                                         <CardDescription>
-                                            {new Date(analysis.date).toLocaleDateString('pt-BR')}
+                                            <div className="flex items-center gap-2">
+                                                <span>{new Date(analysis.date).toLocaleDateString('pt-BR')}</span>
+                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
+                                                    {analysis.category === 'Análise PDF' ? 'PDF' : 'CSV'}
+                                                </span>
+                                            </div>
                                         </CardDescription>
                                     </CardHeader>
                                     <CardContent>
