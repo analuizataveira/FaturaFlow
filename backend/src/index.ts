@@ -4,7 +4,11 @@ import { usersRoutes } from './modules/users/routes/users.route';
 import { mongoConnect, mongoDisconnect } from './database/mongoose-connect';
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
-const server: FastifyInstance = Fastify({ logger: true });
+const server: FastifyInstance = Fastify({ 
+  logger: true,
+  requestTimeout: 120000, // 2 minutos
+  keepAliveTimeout: 120000, // 2 minutos
+});
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
 mongoConnect();
@@ -15,7 +19,13 @@ server.register(fastifyCors, {
   credentials: true,
 });
 
-server.register(fastifyMultipart);
+server.register(fastifyMultipart, {
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB
+  },
+  attachFieldsToBody: false,
+  sharedSchemaId: 'MultipartFileType',
+});
 
 const opts: RouteShorthandOptions = {
   schema: {

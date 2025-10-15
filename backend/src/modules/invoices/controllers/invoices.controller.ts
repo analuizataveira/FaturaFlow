@@ -32,6 +32,15 @@ const findOne = async (request: FastifyRequest, reply: FastifyReply) => {
   return reply.send(invoice);
 };
 
+const getAnalysis = async (request: FastifyRequest, reply: FastifyReply) => {
+  const { params } = request;
+
+  const id = mongooseIdDTO(params);
+  const analysis = await invoicesService.getAnalysis(id);
+
+  return reply.send(analysis);
+};
+
 const update = async (request: FastifyRequest, reply: FastifyReply) => {
   const { params, body } = request;
 
@@ -169,14 +178,108 @@ const updateInvoiceInAnalysis = async (
   }
 };
 
+const updateTransactionInAnalysis = async (
+  request: FastifyRequest<{
+    Params: { analysisId: string; transactionId: string };
+    Body: {
+      description: string;
+      value: number;
+      category: string;
+    };
+  }>,
+  reply: FastifyReply,
+) => {
+  console.log('📝 [InvoicesController] Atualizando transação:', {
+    analysisId: request.params.analysisId,
+    transactionId: request.params.transactionId,
+    body: request.body,
+    paramsType: typeof request.params,
+    analysisIdType: typeof request.params.analysisId,
+    transactionIdType: typeof request.params.transactionId
+  });
+
+  const { params, body } = request;
+  const analysisId = mongooseIdDTO(params.analysisId);
+  const transactionId = mongooseIdDTO(params.transactionId);
+
+  console.log('✅ [InvoicesController] IDs validados:', {
+    analysisId,
+    transactionId,
+    analysisIdType: typeof analysisId,
+    transactionIdType: typeof transactionId
+  });
+
+  try {
+    const result = await invoicesService.updateTransactionInAnalysis(
+      analysisId,
+      transactionId,
+      body,
+    );
+
+    console.log('✅ [InvoicesController] Transação atualizada com sucesso:', result);
+    return reply.status(200).send(result);
+  } catch (err) {
+    console.error('❌ [InvoicesController] Erro ao atualizar transação:', err);
+    return reply.status(400).send({
+      error: 'Error updating transaction in analysis',
+      message: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+};
+
+const deleteTransactionFromAnalysis = async (
+  request: FastifyRequest<{
+    Params: { analysisId: string; transactionId: string };
+  }>,
+  reply: FastifyReply,
+) => {
+  console.log('🗑️ [InvoicesController] Excluindo transação:', {
+    analysisId: request.params.analysisId,
+    transactionId: request.params.transactionId,
+    paramsType: typeof request.params,
+    analysisIdType: typeof request.params.analysisId,
+    transactionIdType: typeof request.params.transactionId
+  });
+
+  const { params } = request;
+  const analysisId = mongooseIdDTO(params.analysisId);
+  const transactionId = mongooseIdDTO(params.transactionId);
+
+  console.log('✅ [InvoicesController] IDs validados para exclusão:', {
+    analysisId,
+    transactionId,
+    analysisIdType: typeof analysisId,
+    transactionIdType: typeof transactionId
+  });
+
+  try {
+    const result = await invoicesService.deleteTransactionFromAnalysis(
+      analysisId,
+      transactionId,
+    );
+
+    console.log('✅ [InvoicesController] Transação excluída com sucesso:', result);
+    return reply.status(200).send(result);
+  } catch (err) {
+    console.error('❌ [InvoicesController] Erro ao excluir transação:', err);
+    return reply.status(400).send({
+      error: 'Error deleting transaction from analysis',
+      message: err instanceof Error ? err.message : 'Unknown error',
+    });
+  }
+};
+
 export default {
   create,
   findAll,
   findOne,
+  getAnalysis,
   update,
   deleteInvoice,
   deleteAll,
   uploadCsv,
   uploadPdf,
   updateInvoiceInAnalysis,
+  updateTransactionInAnalysis,
+  deleteTransactionFromAnalysis,
 };

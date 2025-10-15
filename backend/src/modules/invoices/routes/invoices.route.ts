@@ -11,10 +11,15 @@ export const invoicesRoutes = (
   fastify.post('/upload/csv/users/:id', invoicesController.uploadCsv);
   fastify.post('/upload/pdf/users/:id', invoicesController.uploadPdf);
   fastify.get('/:id', invoicesController.findOne);
+  fastify.get('/analysis/:id', invoicesController.getAnalysis);
   fastify.get('/users/:id', invoicesController.findAll);
   fastify.patch('/:id', invoicesController.update);
   fastify.delete('/:id', {}, invoicesController.deleteInvoice);
   fastify.delete('/users/:id', {}, invoicesController.deleteAll);
+  
+  // Analysis transaction routes
+  fastify.patch('/analysis/:analysisId/transaction/:transactionId', invoicesController.updateTransactionInAnalysis);
+  fastify.delete('/analysis/:analysisId/transaction/:transactionId', invoicesController.deleteTransactionFromAnalysis);
 
   done();
 };

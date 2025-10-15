@@ -8,16 +8,30 @@ const objectIdSchema = z.string().refine(isValidObjectId, {
 });
 
 export function mongooseIdDTO(input: unknown) {
-  console.log('Input received: ' + JSON.stringify(input));
+  console.log('🔍 [mongooseIdDTO] Input received:', {
+    input,
+    type: typeof input,
+    isObject: typeof input === 'object',
+    hasId: typeof input === 'object' && input !== null && 'id' in input
+  });
 
   const id =
     typeof input === 'object' && input !== null && 'id' in input
       ? (input as { id: string }).id
       : input;
 
+  console.log('🔍 [mongooseIdDTO] Extracted ID:', {
+    id,
+    type: typeof id,
+    value: id
+  });
+
   const parsed = objectIdSchema.parse(id);
 
-  console.log('Parsed ID: ' + JSON.stringify(parsed));
+  console.log('✅ [mongooseIdDTO] Parsed ID:', {
+    parsed,
+    type: typeof parsed
+  });
 
   return parsed;
 }

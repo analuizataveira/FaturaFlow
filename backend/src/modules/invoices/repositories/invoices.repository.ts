@@ -1,6 +1,7 @@
 import { FilterQuery } from 'mongoose';
 import { Invoice } from '../models/invoice.type';
 import { InvoiceModel } from '../models/invoice.model';
+import mongoose from 'mongoose';
 
 const create = async (invoice: Omit<Invoice, 'id'>): Promise<Invoice> => {
   const createdInvoice = await InvoiceModel.create(invoice);
@@ -93,6 +94,100 @@ const updateInvoiceInArray = async (
   } as Invoice;
 };
 
+const updateTransactionInAnalysis = async (
+  analysisId: string,
+  transactionId: string,
+  updateData: {
+    description: string;
+    value: number;
+    category: string;
+  },
+) => {
+  console.log('📝 [InvoicesRepository] Atualizando transação:', {
+    analysisId,
+    transactionId,
+    updateData,
+    transactionIdType: typeof transactionId,
+    transactionIdValue: transactionId
+  });
+
+  try {
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      analysisId,
+      {
+        $set: {
+          'invoices.$[elem].description': updateData.description,
+          'invoices.$[elem].value': updateData.value,
+          'invoices.$[elem].category': updateData.category,
+        },
+      },
+      {
+        arrayFilters: [{ 'elem._id': new mongoose.Types.ObjectId(transactionId) }],
+        new: true,
+      },
+    ).lean();
+
+    if (!updatedInvoice) {
+      console.error('❌ [InvoicesRepository] Análise não encontrada:', analysisId);
+      return null;
+    }
+
+    console.log('✅ [InvoicesRepository] Transação atualizada no banco');
+    return {
+      ...updatedInvoice,
+      id: updatedInvoice._id.toString(),
+    } as Invoice;
+  } catch (error) {
+    console.error('❌ [InvoicesRepository] Erro ao atualizar transação:', {
+      error: error instanceof Error ? error.message : error,
+      analysisId,
+      transactionId,
+      updateData
+    });
+    throw error;
+  }
+};
+
+const deleteTransactionFromAnalysis = async (
+  analysisId: string,
+  transactionId: string,
+) => {
+  console.log('🗑️ [InvoicesRepository] Excluindo transação:', {
+    analysisId,
+    transactionId
+  });
+
+  try {
+    const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
+      analysisId,
+      {
+        $pull: {
+          invoices: { _id: new mongoose.Types.ObjectId(transactionId) },
+        },
+      },
+      { new: true },
+    ).lean();
+
+    if (!updatedInvoice) {
+      console.error('❌ [InvoicesRepository] Análise não encontrada:', analysisId);
+      return null;
+    }
+
+    console.log('✅ [InvoicesRepository] Transação excluída do banco');
+    return {
+      ...updatedInvoice,
+      id: updatedInvoice._id.toString(),
+    } as Invoice;
+  } catch (error) {
+    console.error('❌ [InvoicesRepository] Erro ao excluir transação:', {
+      error: error instanceof Error ? error.message : error,
+      analysisId,
+      transactionId
+    });
+    throw error;
+  }
+};
+
 export default {
   create,
   findById,
@@ -102,4 +197,6 @@ export default {
   remove,
   removeAllByUserId,
   updateInvoiceInArray,
+  updateTransactionInAnalysis,
+  deleteTransactionFromAnalysis,
 };

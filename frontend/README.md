@@ -1,50 +1,45 @@
-# React + TypeScript + Vite
+## Ignite React Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### Technologies
 
-Currently, two official plugins are available:
+- [Vite](https://vitejs.dev/)
+- [React](https://reactjs.org/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [Lupi](https://www.npmjs.com/package/lupi)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Installation
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```bash
+$ yarn install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+### Running the app
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+- Set up the file .env based on the .env.example file.
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+```bash
+# development
+$ yarn dev
 ```
+
+### Lint and Build
+
+```bash
+# Check lint and format the code
+$ yarn lint
+
+# Build the app
+$ yarn build
+```
+
+## Structure
+
+- The app is created in the `src` folder.
+- The app routes are created in the `src/routes` folder, using the
+  `react-router-dom` library.
+- The app pages are created in the `src/pages` folder.
+- The app layouts are created in the `src/layouts` folder.
+- The app components are created in the `src/components` folder.
+- Added components are created in the `src/components/ui` folder.
+- Custom components are created in the `src/components/internal` folder.
+- Custom hooks are created in the `src/hooks` folder.
