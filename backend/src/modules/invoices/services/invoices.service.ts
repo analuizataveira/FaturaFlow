@@ -156,7 +156,6 @@ const uploadCsv = async (
 
     const suggestion = `Analisando seus gastos de R$ ${totalValue.toFixed(2)}, vejo que a categoria "${topCategory.category}" representa a maior parte dos seus gastos (R$ ${topCategory.total.toFixed(2)}). Considere revisar se há oportunidades de economia nesta categoria ou se os valores estão dentro do esperado para seu orçamento mensal.`;
 
-    // Criar documento de análise
     const analysisDocument: Omit<Invoice, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       description: `Análise CSV: ${invoiceName || 'Upload CSV'}`,
@@ -201,6 +200,12 @@ const uploadPdf = async (
     const text = pdfData.text;
 
     const chatGptResponse = await chatGptService.processNubankTransactions(text, userId);
+
+    console.log('[PDF Analysis] ChatGPT suggestion:', {
+      suggestion: chatGptResponse.suggestion,
+      analytics: chatGptResponse.analytics,
+      totalTransactions: chatGptResponse.transactions.length
+    });
 
     let imported = 0;
     let errors = 0;

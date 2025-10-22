@@ -58,13 +58,6 @@ export default function HistoryPage() {
                 // Combinar transações regulares e análises para o histórico
                 const allInvoices = [...data.regularInvoices, ...data.analysisInvoices];
                 
-                console.log('🔍 [InvoiceHistory] Dados carregados:', {
-                    regularInvoices: data.regularInvoices.length,
-                    analysisInvoices: data.analysisInvoices.length,
-                    totalAmount: data.totalAmount,
-                    allInvoices: allInvoices.length
-                });
-                
                 setInvoices(allInvoices);
                 
                 // Calcular valor total dinamicamente baseado nas transações atuais

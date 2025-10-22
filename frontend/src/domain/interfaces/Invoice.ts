@@ -13,6 +13,11 @@ export interface CsvUploadResponse {
   invoicesCreated: number;
 }
 
+export interface AnalyticsData {
+  category: string;
+  total: number;
+}
+
 export interface Invoice {
   _id?: string; 
   date: string;
@@ -21,9 +26,10 @@ export interface Invoice {
   category: string;
   payment: string;
   userId: string;
-  // Propriedades para análises de PDF
   invoiceName?: string;
   invoices?: Invoice[];
+  analytics?: AnalyticsData[];
+  suggestion?: string;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -35,7 +35,6 @@ export default function AnalysisDetails() {
         setIsLoading(true);
         setError(null);
         
-        // Buscar a análise específica
         const foundAnalysis = await invoiceRepository.getAnalysisById(analysisId);
 
         if (!foundAnalysis) {
@@ -45,13 +44,6 @@ export default function AnalysisDetails() {
         }
 
         setAnalysis(foundAnalysis);
-        console.log('🔍 [AnalysisDetails] Análise carregada:', {
-          id: foundAnalysis._id,
-          value: foundAnalysis.value,
-          invoiceName: foundAnalysis.invoiceName,
-          invoicesCount: foundAnalysis.invoices?.length || 0,
-          invoices: foundAnalysis.invoices
-        });
       } catch (err) {
         console.error('Erro ao buscar análise:', err);
         setError('Erro ao carregar análise');
@@ -70,15 +62,6 @@ export default function AnalysisDetails() {
   const totalAmount = transactionsToUse.reduce((sum, transaction) => sum + transaction.value, 0);
   const transactionsCount = transactionsToUse.length;
   
-  // Debug: verificar dados da análise
-  console.log('🔍 [AnalysisDetails] Dados da análise:', {
-    analysisId: analysis?._id,
-    analysisValue: analysis?.value,
-    invoicesLength: analysis?.invoices?.length || 0,
-    totalAmount,
-    transactionsCount
-  });
-
   const handleEditTransaction = async () => {
     if (!editingTransaction?._id || !analysisId) {
       setError('Selecione uma transação para editar');
@@ -88,7 +71,6 @@ export default function AnalysisDetails() {
     try {
       setIsSubmitting(true);
 
-      // Chamar API para atualizar no backend
       await invoiceRepository.updateTransactionInAnalysis(
         analysisId,
         editingTransaction._id,
@@ -106,11 +88,6 @@ export default function AnalysisDetails() {
         value: editFormData.value || editingTransaction.value
       };
 
-      console.log('🔍 [AnalysisDetails] Atualizando estado local:', {
-        editingTransactionId: editingTransaction._id,
-        updatedTransaction,
-        analysisInvoicesLength: analysis?.invoices?.length || 0
-      });
 
       // Atualizar transações na análise
       if (analysis && analysis.invoices) {
@@ -126,13 +103,11 @@ export default function AnalysisDetails() {
           invoices: updatedInvoices,
           value: newTotalValue
         });
-        console.log('✅ [AnalysisDetails] Atualizado analysis.invoices e valor total:', newTotalValue);
       }
 
       // Atualizar transação selecionada se for a mesma
       if (selectedTransaction?._id === editingTransaction._id) {
         setSelectedTransaction(updatedTransaction);
-        console.log('✅ [AnalysisDetails] Atualizado selectedTransaction');
       }
 
       setEditingTransaction(null);
@@ -175,13 +150,11 @@ export default function AnalysisDetails() {
           invoices: updatedInvoices,
           value: newTotalValue
         });
-        console.log('✅ [AnalysisDetails] Removido de analysis.invoices e valor total atualizado:', newTotalValue);
       }
 
       // Limpar transação selecionada se for a mesma que foi excluída
       if (selectedTransaction?._id === transactionId) {
         setSelectedTransaction(null);
-        console.log('✅ [AnalysisDetails] Limpado selectedTransaction');
       }
 
       setError(null);
@@ -258,7 +231,18 @@ export default function AnalysisDetails() {
           </div>
         </div>
         {analysis.invoices && analysis.invoices.length > 0 && (
-          <Button onClick={() => setShowAnalysis(true)} size="lg" className="gap-2">
+          <Button onClick={async () => {
+            try {
+              const updatedAnalysis = await invoiceRepository.getAnalysisById(analysisId!);
+              if (updatedAnalysis) {
+                setAnalysis(updatedAnalysis);
+              }
+            } catch (error) {
+              console.error('❌ [AnalysisDetails] Erro ao atualizar análise:', error);
+            }
+
+            setShowAnalysis(true);
+          }} size="lg" className="gap-2">
             <BarChart3 className="h-5 w-5" />
             Gerar Análise
           </Button>
@@ -553,18 +537,22 @@ export default function AnalysisDetails() {
 
       {/* Analysis Modal */}
       {showAnalysis && (
-        <AnalysisResults
-          transactions={transactionsToUse.map(transaction => ({
-            _id: transaction._id,
-            date: transaction.date,
-            description: transaction.description,
-            value: transaction.value,
-            category: transaction.category,
-            payment: transaction.payment || 'Cartão de Crédito',
-            userId: analysis.userId
-          }))}
-          onClose={() => setShowAnalysis(false)}
-        />
+        <>
+          <AnalysisResults
+            transactions={transactionsToUse.map(transaction => ({
+              _id: transaction._id,
+              date: transaction.date,
+              description: transaction.description,
+              value: transaction.value,
+              category: transaction.category,
+              payment: transaction.payment || 'Cartão de Crédito',
+              userId: analysis.userId
+            }))}
+            onClose={() => setShowAnalysis(false)}
+            analytics={(analysis as any).analytics}
+            suggestion={(analysis as any).suggestion}
+          />
+        </>
       )}
     </div>
   );
