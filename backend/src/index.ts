@@ -4,7 +4,7 @@ import { usersRoutes } from './modules/users/routes/users.route';
 import { mongoConnect, mongoDisconnect } from './database/mongoose-connect';
 import fastifyCors from '@fastify/cors';
 import fastifyMultipart from '@fastify/multipart';
-const server: FastifyInstance = Fastify({ 
+const server: FastifyInstance = Fastify({
   logger: true,
   requestTimeout: 120000, // 2 minutos
   keepAliveTimeout: 120000, // 2 minutos
@@ -74,7 +74,6 @@ const start = async () => {
       port: Number(process.env.PORT) || 3000,
       host: process.env.HOST || 'localhost',
     });
-    console.log(`Server running on http://localhost:${process.env.PORT || 3000}`);
   } catch (err) {
     await mongoDisconnect();
     server.log.error(err);

@@ -103,14 +103,6 @@ const updateTransactionInAnalysis = async (
     category: string;
   },
 ) => {
-  console.log('📝 [InvoicesRepository] Atualizando transação:', {
-    analysisId,
-    transactionId,
-    updateData,
-    transactionIdType: typeof transactionId,
-    transactionIdValue: transactionId
-  });
-
   try {
     const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
       analysisId,
@@ -128,54 +120,42 @@ const updateTransactionInAnalysis = async (
     ).lean();
 
     if (!updatedInvoice) {
-      console.error('❌ [InvoicesRepository] Análise não encontrada:', analysisId);
+      console.error('[InvoicesRepository] Análise não encontrada:', analysisId);
       return null;
     }
 
     // Recalcular o valor total baseado nas transações atualizadas
-    const newTotalValue = updatedInvoice.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
-    
+    const newTotalValue =
+      updatedInvoice.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
+
     // Atualizar o valor total da análise
     const finalInvoice = await InvoiceModel.findByIdAndUpdate(
       analysisId,
       { value: newTotalValue },
-      { new: true }
+      { new: true },
     ).lean();
 
     if (!finalInvoice) {
-      console.error('❌ [InvoicesRepository] Erro ao atualizar valor total da análise:', analysisId);
+      console.error('[InvoicesRepository] Erro ao atualizar valor total da análise:', analysisId);
       return null;
     }
-
-    console.log('✅ [InvoicesRepository] Transação atualizada e valor total recalculado:', {
-      newTotalValue,
-      totalTransactions: updatedInvoice.invoices?.length || 0
-    });
 
     return {
       ...finalInvoice,
       id: finalInvoice._id.toString(),
     } as Invoice;
   } catch (error) {
-    console.error('❌ [InvoicesRepository] Erro ao atualizar transação:', {
+    console.error('[InvoicesRepository] Erro ao atualizar transação:', {
       error: error instanceof Error ? error.message : error,
       analysisId,
       transactionId,
-      updateData
+      updateData,
     });
     throw error;
   }
 };
 
-const deleteTransactionFromAnalysis = async (
-  analysisId: string,
-  transactionId: string,
-) => {
-  console.log('🗑️ [InvoicesRepository] Excluindo transação:', {
-    analysisId,
-    transactionId
-  });
-
+const deleteTransactionFromAnalysis = async (analysisId: string, transactionId: string) => {
   try {
     const updatedInvoice = await InvoiceModel.findByIdAndUpdate(
       analysisId,
@@ -188,39 +168,35 @@ const deleteTransactionFromAnalysis = async (
     ).lean();
 
     if (!updatedInvoice) {
-      console.error('❌ [InvoicesRepository] Análise não encontrada:', analysisId);
+      console.error('[InvoicesRepository] Análise não encontrada:', analysisId);
       return null;
     }
 
     // Recalcular o valor total baseado nas transações restantes
-    const newTotalValue = updatedInvoice.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
-    
+    const newTotalValue =
+      updatedInvoice.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
+
     // Atualizar o valor total da análise
     const finalInvoice = await InvoiceModel.findByIdAndUpdate(
       analysisId,
       { value: newTotalValue },
-      { new: true }
+      { new: true },
     ).lean();
 
     if (!finalInvoice) {
-      console.error('❌ [InvoicesRepository] Erro ao atualizar valor total da análise:', analysisId);
+      console.error('[InvoicesRepository] Erro ao atualizar valor total da análise:', analysisId);
       return null;
     }
-
-    console.log('✅ [InvoicesRepository] Transação excluída e valor total recalculado:', {
-      newTotalValue,
-      remainingTransactions: updatedInvoice.invoices?.length || 0
-    });
 
     return {
       ...finalInvoice,
       id: finalInvoice._id.toString(),
     } as Invoice;
   } catch (error) {
-    console.error('❌ [InvoicesRepository] Erro ao excluir transação:', {
+    console.error('[InvoicesRepository] Erro ao excluir transação:', {
       error: error instanceof Error ? error.message : error,
       analysisId,
-      transactionId
+      transactionId,
     });
     throw error;
   }

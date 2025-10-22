@@ -30,9 +30,8 @@ const findByUserId = async (
     PDF: Invoice[];
   };
 }> => {
-  
   const invoices = await invoicesRepository.findByUserId(userId);
-  
+
   // Separar transações regulares das análises
   const regularInvoices = invoices.filter((invoice) => !invoice.invoiceName || !invoice.invoices);
   const analysisInvoices = invoices.filter((invoice) => invoice.invoiceName && invoice.invoices);
@@ -60,15 +59,15 @@ const findByUserId = async (
   );
 
   // Separar análises por tipo
-  const csvAnalyses = analysisInvoices.filter(analysis => analysis.category === 'Análise CSV');
-  const pdfAnalyses = analysisInvoices.filter(analysis => analysis.category === 'Análise PDF');
+  const csvAnalyses = analysisInvoices.filter((analysis) => analysis.category === 'Análise CSV');
+  const pdfAnalyses = analysisInvoices.filter((analysis) => analysis.category === 'Análise PDF');
 
   return {
     ...result,
     analyses: {
       CSV: csvAnalyses,
-      PDF: pdfAnalyses
-    }
+      PDF: pdfAnalyses,
+    },
   };
 };
 
@@ -137,6 +136,26 @@ const uploadCsv = async (
       }
     }
 
+    const categoryTotals: Record<string, number> = {};
+    for (const invoice of processedInvoices) {
+      if (!categoryTotals[invoice.category]) {
+        categoryTotals[invoice.category] = 0;
+      }
+      categoryTotals[invoice.category] += invoice.value;
+    }
+
+    const analytics = Object.entries(categoryTotals).map(([category, total]) => ({
+      category,
+      total: parseFloat(total.toFixed(2)),
+    }));
+
+    const totalValue = processedInvoices.reduce((sum, inv) => sum + inv.value, 0);
+    const topCategory = analytics.reduce((max, current) =>
+      current.total > max.total ? current : max,
+    );
+
+    const suggestion = `Analisando seus gastos de R$ ${totalValue.toFixed(2)}, vejo que a categoria "${topCategory.category}" representa a maior parte dos seus gastos (R$ ${topCategory.total.toFixed(2)}). Considere revisar se há oportunidades de economia nesta categoria ou se os valores estão dentro do esperado para seu orçamento mensal.`;
+
     // Criar documento de análise
     const analysisDocument: Omit<Invoice, 'id'> = {
       date: new Date().toISOString().split('T')[0],
@@ -147,6 +166,8 @@ const uploadCsv = async (
       userId,
       invoiceName: invoiceName || `CSV Upload ${new Date().toISOString().split('T')[0]}`,
       invoices: processedInvoices,
+      analytics,
+      suggestion,
     };
 
     const savedAnalysis = await invoicesRepository.create(analysisDocument);
@@ -200,7 +221,7 @@ const uploadPdf = async (
           value: invoiceData.value,
           category: invoiceData.category,
         });
-        
+
         imported++;
       } catch (error) {
         console.error('Erro ao processar invoice:', error);
@@ -209,13 +230,7 @@ const uploadPdf = async (
     }
 
     const totalValue = processedInvoices.reduce((sum, inv) => sum + inv.value, 0);
-    
-    console.log('🔍 [InvoicesService] Criando análise PDF:', {
-      processedInvoicesCount: processedInvoices.length,
-      totalValue,
-      processedInvoices: processedInvoices.slice(0, 3) // Mostrar apenas as primeiras 3 para debug
-    });
-    
+
     const analysisDocument: Omit<Invoice, 'id'> = {
       date: new Date().toISOString().split('T')[0],
       description: `Análise PDF: ${invoiceName || 'Upload PDF'}`,
@@ -225,6 +240,8 @@ const uploadPdf = async (
       userId,
       invoiceName: invoiceName || `PDF Upload ${new Date().toISOString().split('T')[0]}`,
       invoices: processedInvoices,
+      analytics: chatGptResponse.analytics,
+      suggestion: chatGptResponse.suggestion,
     };
 
     const savedAnalysis = await invoicesRepository.create(analysisDocument);
@@ -310,12 +327,6 @@ const updateTransactionInAnalysis = async (
     category: string;
   },
 ) => {
-  console.log('📝 [InvoicesService] Atualizando transação na análise:', {
-    analysisId,
-    transactionId,
-    updateData
-  });
-
   const updatedAnalysis = await invoicesRepository.updateTransactionInAnalysis(
     analysisId,
     transactionId,
@@ -326,19 +337,10 @@ const updateTransactionInAnalysis = async (
     throw new NotFoundError('Erro ao atualizar transação na análise');
   }
 
-  console.log('✅ [InvoicesService] Transação atualizada com sucesso');
   return updatedAnalysis;
 };
 
-const deleteTransactionFromAnalysis = async (
-  analysisId: string,
-  transactionId: string,
-) => {
-  console.log('🗑️ [InvoicesService] Excluindo transação da análise:', {
-    analysisId,
-    transactionId
-  });
-
+const deleteTransactionFromAnalysis = async (analysisId: string, transactionId: string) => {
   const updatedAnalysis = await invoicesRepository.deleteTransactionFromAnalysis(
     analysisId,
     transactionId,
@@ -348,7 +350,6 @@ const deleteTransactionFromAnalysis = async (
     throw new NotFoundError('Erro ao excluir transação da análise');
   }
 
-  console.log('✅ [InvoicesService] Transação excluída com sucesso');
   return updatedAnalysis;
 };
 

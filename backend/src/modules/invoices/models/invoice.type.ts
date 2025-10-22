@@ -1,3 +1,8 @@
+export type AnalyticsData = {
+  category: string;
+  total: number;
+};
+
 export type Invoice = {
   id: string;
   date: string;
@@ -16,4 +21,7 @@ export type Invoice = {
     value: number;
     category: string;
   }>;
+  // Novos campos para análise
+  analytics?: AnalyticsData[];
+  suggestion?: string;
 };
