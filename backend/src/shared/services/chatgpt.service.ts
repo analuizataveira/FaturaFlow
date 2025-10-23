@@ -35,23 +35,28 @@ class ChatGptService {
   }
 
   async processNubankTransactions(extractedText: string, userId: string): Promise<ChatGptResponse> {
-    console.log('[ChatGptService] Starting transaction processing', {
+    const totalStartTime = Date.now();
+    console.log('⏱️ [ChatGPT] Iniciando processamento de transações:', {
+      timestamp: new Date().toISOString(),
       userId,
       textLength: extractedText.length,
       textPreview: extractedText.substring(0, 200) + '...',
     });
 
     try {
+      const promptStartTime = Date.now();
       const prompt = this.createPrompt(extractedText, userId);
+      const promptTime = Date.now() - promptStartTime;
 
-      console.log('[ChatGptService] Prompt created, sending to OpenAI', {
+      console.log('⏱️ [ChatGPT] Prompt criado:', {
+        promptTimeMs: promptTime,
         promptLength: prompt.length,
         promptPreview: prompt.substring(0, 300) + '...',
       });
 
-      const startTime = Date.now();
+      const openaiStartTime = Date.now();
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: 'gpt-4.1-nano',
         messages: [
           {
             role: 'system',
@@ -95,9 +100,10 @@ TRATAMENTO DE CASOS ESPECIAIS:
         max_tokens: 6000,
       });
 
-      const processingTime = Date.now() - startTime;
-      console.log('[ChatGptService] OpenAI response received', {
-        processingTimeMs: processingTime,
+      const openaiResponseTime = Date.now() - openaiStartTime;
+      console.log('⏱️ [ChatGPT] Resposta OpenAI recebida:', {
+        openaiResponseTimeMs: openaiResponseTime,
+        openaiResponseTimeSeconds: (openaiResponseTime / 1000).toFixed(2),
         usage: completion.usage,
         choicesCount: completion.choices.length,
         model: completion.model,
@@ -138,11 +144,27 @@ TRATAMENTO DE CASOS ESPECIAIS:
       console.log('[ChatGptService] Validating response structure');
       this.validateResponse(parsedResponse);
 
-      console.log('[ChatGptService] Processing completed successfully', {
+      const totalEndTime = Date.now();
+      const totalProcessingTime = totalEndTime - totalStartTime;
+      const openaiTime = totalEndTime - openaiStartTime;
+
+      console.log('⏱️ [ChatGPT] Processamento concluído:', {
+        timestamp: new Date().toISOString(),
+        totalProcessingTimeMs: totalProcessingTime,
+        totalProcessingTimeSeconds: (totalProcessingTime / 1000).toFixed(2),
+        openaiTimeMs: openaiTime,
+        openaiTimeSeconds: (openaiTime / 1000).toFixed(2),
+        promptTimeMs: promptTime,
         totalTransactions: parsedResponse.transactions.length,
         totalValue: parsedResponse.summary.totalValue,
         categoriesCount: Object.keys(parsedResponse.summary.categories).length,
+        performance: {
+          avgTimePerTransaction: (totalProcessingTime / parsedResponse.transactions.length).toFixed(2) + 'ms',
+          transactionsPerSecond: ((parsedResponse.transactions.length / totalProcessingTime) * 1000).toFixed(2),
+          openaiEfficiency: ((openaiTime / totalProcessingTime) * 100).toFixed(1) + '%'
+        }
       });
+
       return parsedResponse;
     } catch (error) {
       console.error('[ChatGptService] Processing failed', {
