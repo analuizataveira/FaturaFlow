@@ -15,11 +15,7 @@ export async function mongoConnect() {
     .once('open', () => {
       const infos = connections;
       infos.map((info) =>
-        console.log(
-          // eslint-disable-next-line prettier/prettier
-          `Connected to ${info.host}:${info.port}/${info.name} mongo Database`,
-          // eslint-disable-next-line prettier/prettier
-        ),
+        console.log(`Connected to ${info.host}:${info.port}/${info.name} mongo Database`),
       );
     });
 

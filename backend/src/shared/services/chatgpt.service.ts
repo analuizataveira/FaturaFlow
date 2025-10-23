@@ -9,6 +9,11 @@ export type TransactionData = {
   userId: string;
 };
 
+export type AnalyticsData = {
+  category: string;
+  total: number;
+};
+
 export type ChatGptResponse = {
   transactions: TransactionData[];
   summary: {
@@ -16,6 +21,8 @@ export type ChatGptResponse = {
     totalValue: number;
     categories: Record<string, { count: number; totalValue: number }>;
   };
+  analytics: AnalyticsData[];
+  suggestion: string;
 };
 
 class ChatGptService {
@@ -28,21 +35,28 @@ class ChatGptService {
   }
 
   async processNubankTransactions(extractedText: string, userId: string): Promise<ChatGptResponse> {
-    console.log('🤖 [ChatGptService] Iniciando processamento de transações:', {
+    const totalStartTime = Date.now();
+    console.log('⏱️ [ChatGPT] Iniciando processamento de transações:', {
+      timestamp: new Date().toISOString(),
       userId,
       textLength: extractedText.length,
-      textPreview: extractedText.substring(0, 200) + '...'
+      textPreview: extractedText.substring(0, 200) + '...',
     });
 
     try {
+      const promptStartTime = Date.now();
       const prompt = this.createPrompt(extractedText, userId);
-      
-      console.log('🤖 [ChatGptService] Prompt criado, enviando para OpenAI...');
-      console.log('🤖 [ChatGptService] Prompt preview:', prompt.substring(0, 300) + '...');
+      const promptTime = Date.now() - promptStartTime;
 
-      const startTime = Date.now();
+      console.log('⏱️ [ChatGPT] Prompt criado:', {
+        promptTimeMs: promptTime,
+        promptLength: prompt.length,
+        promptPreview: prompt.substring(0, 300) + '...',
+      });
+
+      const openaiStartTime = Date.now();
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4.1-mini',
+        model: 'gpt-4.1-nano',
         messages: [
           {
             role: 'system',
@@ -83,53 +97,81 @@ TRATAMENTO DE CASOS ESPECIAIS:
           },
         ],
         temperature: 0.1,
-        max_tokens: 4000,
+        max_tokens: 6000,
       });
 
-      const processingTime = Date.now() - startTime;
-      console.log('🤖 [ChatGptService] Resposta do OpenAI recebida:', {
-        processingTime: `${processingTime}ms`,
+      const openaiResponseTime = Date.now() - openaiStartTime;
+      console.log('⏱️ [ChatGPT] Resposta OpenAI recebida:', {
+        openaiResponseTimeMs: openaiResponseTime,
+        openaiResponseTimeSeconds: (openaiResponseTime / 1000).toFixed(2),
         usage: completion.usage,
-        choicesCount: completion.choices.length
+        choicesCount: completion.choices.length,
+        model: completion.model,
       });
 
       const response = completion.choices[0]?.message?.content;
       if (!response) {
-        console.error('❌ [ChatGptService] Nenhuma resposta do ChatGPT');
+        console.error('[ChatGptService] No response content from ChatGPT');
         throw new Error('No response from ChatGPT');
       }
 
-      console.log('🤖 [ChatGptService] Resposta recebida:', {
+      console.log('[ChatGptService] Response content received', {
         responseLength: response.length,
-        responsePreview: response.substring(0, 200) + '...'
+        responsePreview: response.substring(0, 200) + '...',
       });
 
       let parsedResponse: ChatGptResponse;
       try {
-        console.log('🤖 [ChatGptService] Fazendo parse da resposta JSON...');
+        console.log('[ChatGptService] Parsing JSON response');
         parsedResponse = JSON.parse(response) as ChatGptResponse;
-        console.log('✅ [ChatGptService] JSON parseado com sucesso:', {
+        console.log('[ChatGptService] JSON parsed successfully', {
           transactionsCount: parsedResponse.transactions?.length || 0,
-          hasSummary: !!parsedResponse.summary
+          hasSummary: !!parsedResponse.summary,
+          hasAnalytics: !!parsedResponse.analytics,
+          hasSuggestion: !!parsedResponse.suggestion,
         });
       } catch (parseError) {
-        console.error('❌ [ChatGptService] Erro ao fazer parse do JSON:', {
+        console.error('[ChatGptService] JSON parsing failed', {
           error: parseError instanceof Error ? parseError.message : parseError,
-          rawResponse: response.substring(0, 500) + '...'
+          responseLength: response.length,
+          rawResponsePreview: response.substring(0, 500) + '...',
         });
-        throw new Error('Invalid JSON response from ChatGPT');
+        throw new Error(
+          `Invalid JSON response from ChatGPT. Response length: ${response.length} characters`,
+        );
       }
 
-      console.log('🤖 [ChatGptService] Validando resposta...');
+      console.log('[ChatGptService] Validating response structure');
       this.validateResponse(parsedResponse);
 
-      console.log('✅ [ChatGptService] Processamento concluído com sucesso');
+      const totalEndTime = Date.now();
+      const totalProcessingTime = totalEndTime - totalStartTime;
+      const openaiTime = totalEndTime - openaiStartTime;
+
+      console.log('⏱️ [ChatGPT] Processamento concluído:', {
+        timestamp: new Date().toISOString(),
+        totalProcessingTimeMs: totalProcessingTime,
+        totalProcessingTimeSeconds: (totalProcessingTime / 1000).toFixed(2),
+        openaiTimeMs: openaiTime,
+        openaiTimeSeconds: (openaiTime / 1000).toFixed(2),
+        promptTimeMs: promptTime,
+        totalTransactions: parsedResponse.transactions.length,
+        totalValue: parsedResponse.summary.totalValue,
+        categoriesCount: Object.keys(parsedResponse.summary.categories).length,
+        performance: {
+          avgTimePerTransaction: (totalProcessingTime / parsedResponse.transactions.length).toFixed(2) + 'ms',
+          transactionsPerSecond: ((parsedResponse.transactions.length / totalProcessingTime) * 1000).toFixed(2),
+          openaiEfficiency: ((openaiTime / totalProcessingTime) * 100).toFixed(1) + '%'
+        }
+      });
+
       return parsedResponse;
     } catch (error) {
-      console.error('❌ [ChatGptService] Erro no processamento:', {
+      console.error('[ChatGptService] Processing failed', {
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined,
-        userId
+        userId,
+        textLength: extractedText.length,
       });
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(`ChatGPT processing failed: ${errorMessage}`);
@@ -220,6 +262,12 @@ INSTRUÇÕES DE EXTRAÇÃO:
    • Compras internacionais: Categorize normalmente
    • Assinaturas recorrentes: Identifique pela descrição (ex: "Netflix" → Serviços)
 
+5. ANÁLISE E SUGESTÕES:
+   • Calcule o total gasto por categoria para o campo "analytics"
+   • Gere uma sugestão concisa (máximo 200 caracteres) em português brasileiro
+   • Seja positivo e construtivo, focando em uma oportunidade específica
+   • Evite linguagem crítica ou agressiva
+
 ═══════════════════════════════════════════════════════════════
 FORMATO DE SAÍDA (JSON):
 ═══════════════════════════════════════════════════════════════
@@ -268,7 +316,22 @@ FORMATO DE SAÍDA (JSON):
         "totalValue": 250.00
       }
     }
-  }
+  },
+  "analytics": [
+    {
+      "category": "Saúde",
+      "total": 82.66
+    },
+    {
+      "category": "Alimentação",
+      "total": 45.90
+    },
+    {
+      "category": "Transporte",
+      "total": 250.00
+    }
+  ],
+  "suggestion": "Ótimo controle dos gastos! Considere programas de fidelidade em postos para economizar no transporte."
 }
 
 ═══════════════════════════════════════════════════════════════
@@ -277,43 +340,91 @@ IMPORTANTE: Retorne APENAS o JSON, sem texto adicional.
   }
 
   private validateResponse(response: ChatGptResponse): void {
-    console.log('🔍 [ChatGptService] Validando resposta:', {
+    console.log('[ChatGptService] Validating response structure', {
       hasTransactions: !!response.transactions,
       transactionsCount: response.transactions?.length || 0,
-      hasSummary: !!response.summary
+      hasSummary: !!response.summary,
+      hasAnalytics: !!response.analytics,
+      hasSuggestion: !!response.suggestion,
     });
 
     if (!response.transactions || !Array.isArray(response.transactions)) {
-      console.error('❌ [ChatGptService] Validação falhou: array de transações inválido');
+      console.error('[ChatGptService] Validation failed: invalid transactions array');
       throw new Error('Invalid response: transactions array is required');
     }
 
     if (!response.summary) {
-      console.error('❌ [ChatGptService] Validação falhou: resumo ausente');
+      console.error('[ChatGptService] Validation failed: missing summary');
       throw new Error('Invalid response: summary is required');
     }
 
-    console.log('🔍 [ChatGptService] Validando transações individuais...');
+    if (!response.analytics || !Array.isArray(response.analytics)) {
+      console.error('[ChatGptService] Validation failed: invalid analytics array');
+      throw new Error('Invalid response: analytics array is required');
+    }
+
+    if (!response.suggestion || typeof response.suggestion !== 'string') {
+      console.error('[ChatGptService] Validation failed: invalid suggestion');
+      throw new Error('Invalid response: suggestion string is required');
+    }
+
+    console.log('[ChatGptService] Validating individual transactions');
     for (let i = 0; i < response.transactions.length; i++) {
       const transaction = response.transactions[i];
-      
+
       if (!transaction.date || !transaction.description || !transaction.value) {
-        console.error(`❌ [ChatGptService] Transação ${i} inválida: campos obrigatórios ausentes`, transaction);
+        console.error(
+          `[ChatGptService] Transaction ${i} validation failed: missing required fields`,
+          {
+            transactionIndex: i,
+            transaction: transaction,
+          },
+        );
         throw new Error('Invalid transaction: missing required fields');
       }
 
       if (typeof transaction.value !== 'number' || transaction.value <= 0) {
-        console.error(`❌ [ChatGptService] Transação ${i} inválida: valor inválido`, transaction);
+        console.error(`[ChatGptService] Transaction ${i} validation failed: invalid value`, {
+          transactionIndex: i,
+          transaction: transaction,
+          valueType: typeof transaction.value,
+          value: transaction.value,
+        });
         throw new Error('Invalid transaction: value must be a positive number');
       }
 
       if (!transaction.category || !transaction.payment || !transaction.userId) {
-        console.error(`❌ [ChatGptService] Transação ${i} inválida: categoria/pagamento/userId ausente`, transaction);
+        console.error(
+          `[ChatGptService] Transaction ${i} validation failed: missing category/payment/userId`,
+          {
+            transactionIndex: i,
+            transaction: transaction,
+          },
+        );
         throw new Error('Invalid transaction: missing category, payment or userId');
       }
     }
 
-    console.log('✅ [ChatGptService] Validação concluída com sucesso');
+    console.log('[ChatGptService] Validating analytics data');
+    for (let i = 0; i < response.analytics.length; i++) {
+      const analytic = response.analytics[i];
+      if (!analytic.category || typeof analytic.total !== 'number') {
+        console.error(
+          `[ChatGptService] Analytics ${i} validation failed: missing category or total`,
+          {
+            analyticsIndex: i,
+            analytic: analytic,
+          },
+        );
+        throw new Error('Invalid analytics: missing category or total');
+      }
+    }
+
+    console.log('[ChatGptService] Response validation completed successfully', {
+      transactionsValidated: response.transactions.length,
+      analyticsValidated: response.analytics.length,
+      suggestionLength: response.suggestion.length,
+    });
   }
 }
 

@@ -189,25 +189,9 @@ const updateTransactionInAnalysis = async (
   }>,
   reply: FastifyReply,
 ) => {
-  console.log('📝 [InvoicesController] Atualizando transação:', {
-    analysisId: request.params.analysisId,
-    transactionId: request.params.transactionId,
-    body: request.body,
-    paramsType: typeof request.params,
-    analysisIdType: typeof request.params.analysisId,
-    transactionIdType: typeof request.params.transactionId
-  });
-
   const { params, body } = request;
   const analysisId = mongooseIdDTO(params.analysisId);
   const transactionId = mongooseIdDTO(params.transactionId);
-
-  console.log('✅ [InvoicesController] IDs validados:', {
-    analysisId,
-    transactionId,
-    analysisIdType: typeof analysisId,
-    transactionIdType: typeof transactionId
-  });
 
   try {
     const result = await invoicesService.updateTransactionInAnalysis(
@@ -216,7 +200,6 @@ const updateTransactionInAnalysis = async (
       body,
     );
 
-    console.log('✅ [InvoicesController] Transação atualizada com sucesso:', result);
     return reply.status(200).send(result);
   } catch (err) {
     console.error('❌ [InvoicesController] Erro ao atualizar transação:', err);
@@ -233,32 +216,13 @@ const deleteTransactionFromAnalysis = async (
   }>,
   reply: FastifyReply,
 ) => {
-  console.log('🗑️ [InvoicesController] Excluindo transação:', {
-    analysisId: request.params.analysisId,
-    transactionId: request.params.transactionId,
-    paramsType: typeof request.params,
-    analysisIdType: typeof request.params.analysisId,
-    transactionIdType: typeof request.params.transactionId
-  });
-
   const { params } = request;
   const analysisId = mongooseIdDTO(params.analysisId);
   const transactionId = mongooseIdDTO(params.transactionId);
 
-  console.log('✅ [InvoicesController] IDs validados para exclusão:', {
-    analysisId,
-    transactionId,
-    analysisIdType: typeof analysisId,
-    transactionIdType: typeof transactionId
-  });
-
   try {
-    const result = await invoicesService.deleteTransactionFromAnalysis(
-      analysisId,
-      transactionId,
-    );
+    const result = await invoicesService.deleteTransactionFromAnalysis(analysisId, transactionId);
 
-    console.log('✅ [InvoicesController] Transação excluída com sucesso:', result);
     return reply.status(200).send(result);
   } catch (err) {
     console.error('❌ [InvoicesController] Erro ao excluir transação:', err);

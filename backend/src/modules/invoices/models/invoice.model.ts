@@ -19,6 +19,13 @@ const invoiceSchema = new Schema<Invoice>(
         category: { type: String, required: true },
       },
     ],
+    analytics: [
+      {
+        category: { type: String, required: true },
+        total: { type: Number, required: true },
+      },
+    ],
+    suggestion: { type: String },
   },
   {
     timestamps: true,

@@ -1,3 +1,8 @@
+export type AnalyticsData = {
+  category: string;
+  total: number;
+};
+
 export type Invoice = {
   id: string;
   date: string;
@@ -8,7 +13,6 @@ export type Invoice = {
   userId: string;
   createdAt?: Date;
   updatedAt?: Date;
-  // Campos para análise (CSV/PDF)
   invoiceName?: string;
   invoices?: Array<{
     date: string;
@@ -16,4 +20,6 @@ export type Invoice = {
     value: number;
     category: string;
   }>;
+  analytics?: AnalyticsData[];
+  suggestion?: string;
 };

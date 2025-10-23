@@ -45,18 +45,6 @@ export default function InvoiceViewer() {
         setError(null);
         const data = await invoiceRepository.getInvoicesByUserIdWithStructure(user.id);
         
-        console.log('🔍 [InvoiceViewer] Dados carregados:', {
-          regularInvoices: data.regularInvoices.length,
-          analysisInvoicesCount: data.analysisInvoices.length,
-          analysisInvoices: data.analysisInvoices.map(analysis => ({
-            id: analysis._id,
-            value: analysis.value,
-            invoiceName: analysis.invoiceName,
-            invoicesCount: analysis.invoices?.length || 0,
-            category: analysis.category
-          }))
-        });
-        
         setInvoices(data.regularInvoices);
         setAnalyses(data.analysisInvoices);
       } catch (err) {
@@ -203,10 +191,14 @@ export default function InvoiceViewer() {
 
       {/* Analysis Modal */}
       {showAnalysis && (
-        <AnalysisResults
-          transactions={invoices}
-          onClose={() => setShowAnalysis(false)}
-        />
+        <>
+          <AnalysisResults
+            transactions={invoices}
+            onClose={() => setShowAnalysis(false)}
+            analytics={analyses.length > 0 ? (analyses[0] as any).analytics : undefined}
+            suggestion={analyses.length > 0 ? (analyses[0] as any).suggestion : undefined}
+          />
+        </>
       )}
 
       {/* Selected Invoice Details */}
@@ -403,14 +395,6 @@ export default function InvoiceViewer() {
               // Calcular valor total dinamicamente baseado nas transações atuais
               const totalValue = analysis.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
               const transactionsCount = analysis.invoices?.length || 0;
-              
-              console.log('🔍 [InvoiceViewer] Análise individual:', {
-                id: analysis._id,
-                value: analysis.value,
-                invoicesCount: analysis.invoices?.length,
-                totalValue,
-                transactionsCount
-              });
               
               return (
                 <Card key={analysis._id} className="hover:shadow-lg transition-all cursor-pointer hover:border-primary">

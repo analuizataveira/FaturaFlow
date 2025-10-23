@@ -10,6 +10,8 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 interface AnalysisResultsProps {
   transactions: Invoice[];
   onClose: () => void;
+  analytics?: Array<{ category: string; total: number }>;
+  suggestion?: string;
 }
 
 interface SavedAnalysis {
@@ -20,22 +22,33 @@ interface SavedAnalysis {
   totalAmount: number;
 }
 
-export default function AnalysisResults({ transactions, onClose }: AnalysisResultsProps) {
+export default function AnalysisResults({ transactions, onClose, analytics, suggestion }: AnalysisResultsProps) {
   const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>(() => {
     const saved = localStorage.getItem('savedAnalyses');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const generateSpendingAnalysis = (transactions: Invoice[]): string => {
-    const categories = transactions.reduce((acc, transaction) => {
-      if (!acc[transaction.category]) {
-        acc[transaction.category] = 0;
-      }
-      acc[transaction.category] += transaction.value;
-      return acc;
-    }, {} as Record<string, number>);
+  const generateSpendingAnalysis = (transactions: Invoice[], backendAnalytics?: Array<{ category: string; total: number }>): string => {
+    // Sempre usar a melhor fonte de dados disponível: backend primeiro, fallback depois
+    let categories: Record<string, number>;
+    let total: number;
     
-    const total = Object.values(categories).reduce((sum, value) => sum + value, 0);
+    if (backendAnalytics && backendAnalytics.length > 0) {
+      categories = backendAnalytics.reduce((acc, item) => {
+        acc[item.category] = item.total;
+        return acc;
+      }, {} as Record<string, number>);
+      total = backendAnalytics.reduce((sum, item) => sum + item.total, 0);
+    } else {
+      categories = transactions.reduce((acc, transaction) => {
+        if (!acc[transaction.category]) {
+          acc[transaction.category] = 0;
+        }
+        acc[transaction.category] += transaction.value;
+        return acc;
+      }, {} as Record<string, number>);
+      total = Object.values(categories).reduce((sum, value) => sum + value, 0);
+    }
     
     const highestCategory = Object.entries(categories).reduce((max, [category, value]) => 
       value > max.value ? { category, value } : max, 
@@ -48,28 +61,38 @@ export default function AnalysisResults({ transactions, onClose }: AnalysisResul
 💰 Total gasto: R$ ${total.toFixed(2)}
 
 📊 Distribuição por categoria:
-${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)} (${((val/total)*100).toFixed(1)}%)`).join('\n')}
+${backendAnalytics && backendAnalytics.length > 0 
+  ? backendAnalytics.map(item => `- ${item.category}: R$ ${item.total.toFixed(2)} (${((item.total/total)*100).toFixed(1)}%)`).join('\n')
+  : Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)} (${((val/total)*100).toFixed(1)}%)`).join('\n')
+}
 
-🔝 Maior gasto: ${highestCategory.category} (R$ ${highestCategory.value.toFixed(2)})
 
-💡 Recomendações:
-1️⃣ Considere reduzir gastos em ${highestCategory.category}
-2️⃣ Revise pequenas despesas que somam grandes valores
-3️⃣ Compare com meses anteriores para identificar padrões`;
+🔝 Maior gasto: ${highestCategory.category} (R$ ${highestCategory.value.toFixed(2)})`;
   };
 
   const saveAnalysis = () => {
-    const analysisText = generateSpendingAnalysis(transactions);
+    const analysisText = generateSpendingAnalysis(transactions, analytics);
     
-    const categories = transactions.reduce((acc, transaction) => {
-      if (!acc[transaction.category]) {
-        acc[transaction.category] = 0;
-      }
-      acc[transaction.category] += transaction.value;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const total = Object.values(categories).reduce((sum, value) => sum + value, 0);
+    // Usar a mesma lógica: backend primeiro, fallback depois
+    let categories: Record<string, number>;
+    let total: number;
+    
+    if (analytics && analytics.length > 0) {
+      categories = analytics.reduce((acc: Record<string, number>, item: { category: string; total: number }) => {
+        acc[item.category] = item.total;
+        return acc;
+      }, {} as Record<string, number>);
+      total = analytics.reduce((sum: number, item: { category: string; total: number }) => sum + item.total, 0);
+    } else {
+      categories = transactions.reduce((acc, transaction) => {
+        if (!acc[transaction.category]) {
+          acc[transaction.category] = 0;
+        }
+        acc[transaction.category] += transaction.value;
+        return acc;
+      }, {} as Record<string, number>);
+      total = Object.values(categories).reduce((sum, value) => sum + value, 0);
+    }
 
     const chartData = {
       labels: Object.keys(categories),
@@ -99,15 +122,25 @@ ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)}
     alert('Análise salva com sucesso!');
   };
 
-  const analysisText = generateSpendingAnalysis(transactions);
+  const analysisText = generateSpendingAnalysis(transactions, analytics);
 
-  const categories = transactions.reduce((acc, transaction) => {
-    if (!acc[transaction.category]) {
-      acc[transaction.category] = 0;
-    }
-    acc[transaction.category] += transaction.value;
-    return acc;
-  }, {} as Record<string, number>);
+  // Usar analytics do backend se disponível, senão calcular das transações
+  let categories: Record<string, number>;
+  
+  if (analytics && analytics.length > 0) {
+    categories = analytics.reduce((acc: Record<string, number>, item: { category: string; total: number }) => {
+      acc[item.category] = item.total;
+      return acc;
+    }, {} as Record<string, number>);
+  } else {
+    categories = transactions.reduce((acc, transaction) => {
+      if (!acc[transaction.category]) {
+        acc[transaction.category] = 0;
+      }
+      acc[transaction.category] += transaction.value;
+      return acc;
+    }, {} as Record<string, number>);
+  }
 
   const chartData = {
     labels: Object.keys(categories),
@@ -159,6 +192,16 @@ ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)}
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="whitespace-pre-line">{analysisText}</p>
             </div>
+            
+            {suggestion && (
+              <div className="mt-4">
+                <h4 className="text-lg font-semibold mb-2 text-blue-600">💡 Sugestão Inteligente</h4>
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                  <p className="text-blue-800 font-medium">{suggestion}</p>
+                </div>
+              </div>
+            )}
+            
           </div>
         </div>
         
@@ -169,14 +212,8 @@ ${Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)}
           >
             <Save /> Salvar Análise
           </Button>
-          <Button 
-            onClick={onClose} 
-            className="btn btn-primary"
-          >
-            Fechar
-          </Button>
         </div>
       </div>
     </div>
   );
-}
+} 

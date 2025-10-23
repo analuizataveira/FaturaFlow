@@ -66,14 +66,12 @@ export class InvoiceRepository extends BaseRepository {
         const regularInvoices: Invoice[] = [];
         const analysisInvoices: Invoice[] = [];
 
-        // Processar transações regulares (categorias)
         for (const category of Object.values(data.categories)) {
             if (category && (category as CategoryDetails).details) {
                 regularInvoices.push(...(category as CategoryDetails).details);
             }
         }
 
-        // Processar análises (CSV e PDF)
         if (data.analyses) {
             if (data.analyses.CSV) {
                 analysisInvoices.push(...data.analyses.CSV);
@@ -82,14 +80,6 @@ export class InvoiceRepository extends BaseRepository {
                 analysisInvoices.push(...data.analyses.PDF);
             }
         }
-
-        console.log('🔍 [InvoiceRepository] Dados processados:', {
-            regularInvoicesCount: regularInvoices.length,
-            analysisInvoicesCount: analysisInvoices.length,
-            totalAmount: data.totalAmount,
-            analysesCSV: data.analyses?.CSV?.length || 0,
-            analysesPDF: data.analyses?.PDF?.length || 0
-        });
 
         return {
             regularInvoices,
