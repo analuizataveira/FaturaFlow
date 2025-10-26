@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import { Invoice } from '../../modules/invoices/models/invoice.type';
 
 export type TransactionData = {
   date: string;
@@ -34,7 +35,11 @@ class ChatGptService {
     });
   }
 
-  async processNubankTransactions(extractedText: string, userId: string): Promise<ChatGptResponse> {
+  async processNubankTransactions(
+    extractedText: string,
+    userId: string,
+    referenceInvoices: Invoice[] = [],
+  ): Promise<ChatGptResponse> {
     const totalStartTime = Date.now();
     console.log('⏱️ [ChatGPT] Iniciando processamento de transações:', {
       timestamp: new Date().toISOString(),
@@ -45,7 +50,7 @@ class ChatGptService {
 
     try {
       const promptStartTime = Date.now();
-      const prompt = this.createPrompt(extractedText, userId);
+      const prompt = this.createPrompt(extractedText, userId, referenceInvoices);
       const promptTime = Date.now() - promptStartTime;
 
       console.log('⏱️ [ChatGPT] Prompt criado:', {
@@ -97,7 +102,7 @@ TRATAMENTO DE CASOS ESPECIAIS:
           },
         ],
         temperature: 0.1,
-        max_tokens: 6000,
+        max_tokens: 8000,
       });
 
       const openaiResponseTime = Date.now() - openaiStartTime;
@@ -159,10 +164,14 @@ TRATAMENTO DE CASOS ESPECIAIS:
         totalValue: parsedResponse.summary.totalValue,
         categoriesCount: Object.keys(parsedResponse.summary.categories).length,
         performance: {
-          avgTimePerTransaction: (totalProcessingTime / parsedResponse.transactions.length).toFixed(2) + 'ms',
-          transactionsPerSecond: ((parsedResponse.transactions.length / totalProcessingTime) * 1000).toFixed(2),
-          openaiEfficiency: ((openaiTime / totalProcessingTime) * 100).toFixed(1) + '%'
-        }
+          avgTimePerTransaction:
+            (totalProcessingTime / parsedResponse.transactions.length).toFixed(2) + 'ms',
+          transactionsPerSecond: (
+            (parsedResponse.transactions.length / totalProcessingTime) *
+            1000
+          ).toFixed(2),
+          openaiEfficiency: ((openaiTime / totalProcessingTime) * 100).toFixed(1) + '%',
+        },
       });
 
       return parsedResponse;
@@ -178,12 +187,47 @@ TRATAMENTO DE CASOS ESPECIAIS:
     }
   }
 
-  private createPrompt(extractedText: string, userId: string): string {
-    return `Analise a fatura de cartão de crédito abaixo e extraia TODAS as transações encontradas.
+  private createPrompt(
+    extractedText: string,
+    userId: string,
+    referenceInvoices: Invoice[] = [],
+  ): string {
+    let referencesSection = '';
+
+    if (referenceInvoices.length > 0) {
+      referencesSection = `
+═══════════════════════════════════════════════════════════════
+EXEMPLOS DE CATEGORIZAÇÃO (REFERÊNCIAS DO USUÁRIO):
+═══════════════════════════════════════════════════════════════
+
+Use os exemplos abaixo para manter a consistência na categorização:
+
+${referenceInvoices
+  .map((invoice, idx) => {
+    if (!invoice.invoices || invoice.invoices.length === 0) return '';
+
+    const userUpdatedTransactions = invoice.invoices
+      .filter((inv) => inv.userUpdated)
+      .map((inv) => `• ${inv.description} → ${inv.category}`)
+      .join('\n');
+
+    if (userUpdatedTransactions) {
+      return `EXEMPLOS DE FATURA ${idx + 1} (${invoice.invoiceName || 'N/A'}):\n${userUpdatedTransactions}\n`;
+    }
+    return '';
+  })
+  .join('\n')}
+
+Estes exemplos mostram como o usuário categorizou manualmente certas transações. Use estes padrões para categorizar transações similares na fatura abaixo.
 
 ═══════════════════════════════════════════════════════════════
 TEXTO DA FATURA:
 ═══════════════════════════════════════════════════════════════
+`;
+    }
+
+    return `Analise a fatura de cartão de crédito abaixo e extraia TODAS as transações encontradas.
+${referencesSection}
 ${extractedText}
 
 ═══════════════════════════════════════════════════════════════

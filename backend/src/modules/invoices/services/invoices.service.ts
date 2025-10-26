@@ -195,16 +195,29 @@ const uploadPdf = async (
   analysisId: string;
 }> => {
   try {
+    const referenceInvoices = await invoicesRepository.findUserUpdatedInvoices(userId);
+
+    console.log('[PDF Analysis] Reference invoices found:', {
+      count: referenceInvoices.length,
+      referencesWithTransactions: referenceInvoices.filter(
+        (inv) => inv.invoices && inv.invoices.some((i) => i.userUpdated),
+      ).length,
+    });
+
     // Extrai o texto do PDF
     const pdfData = await pdf(file);
     const text = pdfData.text;
 
-    const chatGptResponse = await chatGptService.processNubankTransactions(text, userId);
+    const chatGptResponse = await chatGptService.processNubankTransactions(
+      text,
+      userId,
+      referenceInvoices,
+    );
 
     console.log('[PDF Analysis] ChatGPT suggestion:', {
       suggestion: chatGptResponse.suggestion,
       analytics: chatGptResponse.analytics,
-      totalTransactions: chatGptResponse.transactions.length
+      totalTransactions: chatGptResponse.transactions.length,
     });
 
     let imported = 0;

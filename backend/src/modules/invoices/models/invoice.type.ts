@@ -19,7 +19,9 @@ export type Invoice = {
     description: string;
     value: number;
     category: string;
+    userUpdated?: boolean;
   }>;
+  userUpdated?: boolean;
   analytics?: AnalyticsData[];
   suggestion?: string;
 };

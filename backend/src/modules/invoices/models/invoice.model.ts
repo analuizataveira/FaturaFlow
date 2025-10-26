@@ -17,8 +17,10 @@ const invoiceSchema = new Schema<Invoice>(
         description: { type: String, required: true },
         value: { type: Number, required: true },
         category: { type: String, required: true },
+        userUpdated: { type: Boolean, default: false },
       },
     ],
+    userUpdated: { type: Boolean, default: false },
     analytics: [
       {
         category: { type: String, required: true },

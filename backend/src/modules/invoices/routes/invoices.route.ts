@@ -16,10 +16,16 @@ export const invoicesRoutes = (
   fastify.patch('/:id', invoicesController.update);
   fastify.delete('/:id', {}, invoicesController.deleteInvoice);
   fastify.delete('/users/:id', {}, invoicesController.deleteAll);
-  
+
   // Analysis transaction routes
-  fastify.patch('/analysis/:analysisId/transaction/:transactionId', invoicesController.updateTransactionInAnalysis);
-  fastify.delete('/analysis/:analysisId/transaction/:transactionId', invoicesController.deleteTransactionFromAnalysis);
+  fastify.patch(
+    '/analysis/:analysisId/transaction/:transactionId',
+    invoicesController.updateTransactionInAnalysis,
+  );
+  fastify.delete(
+    '/analysis/:analysisId/transaction/:transactionId',
+    invoicesController.deleteTransactionFromAnalysis,
+  );
 
   done();
 };

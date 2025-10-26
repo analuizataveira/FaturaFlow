@@ -111,6 +111,8 @@ const updateTransactionInAnalysis = async (
           'invoices.$[elem].description': updateData.description,
           'invoices.$[elem].value': updateData.value,
           'invoices.$[elem].category': updateData.category,
+          'invoices.$[elem].userUpdated': true,
+          userUpdated: true,
         },
       },
       {
@@ -202,6 +204,28 @@ const deleteTransactionFromAnalysis = async (analysisId: string, transactionId: 
   }
 };
 
+const findUserUpdatedInvoices = async (userId: string): Promise<Invoice[]> => {
+  try {
+    const invoices = await InvoiceModel.find({
+      userId,
+      invoiceName: { $exists: true },
+      invoices: { $exists: true },
+      'invoices.userUpdated': true,
+    }).lean();
+
+    return invoices.map((invoice) => ({
+      ...invoice,
+      id: invoice._id.toString(),
+    })) as Invoice[];
+  } catch (error) {
+    console.error('[InvoicesRepository] Erro ao buscar invoices atualizados:', {
+      error: error instanceof Error ? error.message : error,
+      userId,
+    });
+    throw error;
+  }
+};
+
 export default {
   create,
   findById,
@@ -213,4 +237,5 @@ export default {
   updateInvoiceInArray,
   updateTransactionInAnalysis,
   deleteTransactionFromAnalysis,
+  findUserUpdatedInvoices,
 };
