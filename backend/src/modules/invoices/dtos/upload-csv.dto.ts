@@ -1,4 +1,3 @@
-/* eslint-disable prettier/prettier */
 import { MultipartFile } from '@fastify/multipart';
 
 export const validateCsvDTO = (file: MultipartFile): { isValid: boolean; message?: string } => {
@@ -6,7 +5,6 @@ export const validateCsvDTO = (file: MultipartFile): { isValid: boolean; message
     return { isValid: false, message: 'No file provided' };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   if (file.mimetype !== 'text/csv') {
     return { isValid: false, message: 'The file must be a CSV' };
   }

@@ -3,6 +3,7 @@ import { Invoice } from '../models/invoice.type';
 import invoicesRepository from '../repositories/invoices.repository';
 import { CsvInvoiceData, parseCsvRowDTO } from '../dtos/upload-csv.dto';
 import chatGptService from '../../../shared/services/chatgpt.service';
+import metricsRepository from '../../metrics/repositories/metrics.repository';
 import { parse } from 'csv-parse/sync';
 import pdf from 'pdf-parse';
 
@@ -208,11 +209,8 @@ const uploadPdf = async (
     const pdfData = await pdf(file);
     const text = pdfData.text;
 
-    const chatGptResponse = await chatGptService.processNubankTransactions(
-      text,
-      userId,
-      referenceInvoices,
-    );
+    const { response: chatGptResponse, metrics: chatGptMetrics } =
+      await chatGptService.processNubankTransactions(text, userId, referenceInvoices);
 
     console.log('[PDF Analysis] ChatGPT suggestion:', {
       suggestion: chatGptResponse.suggestion,
@@ -263,6 +261,28 @@ const uploadPdf = async (
     };
 
     const savedAnalysis = await invoicesRepository.create(analysisDocument);
+
+    await metricsRepository.create({
+      userId,
+      analysisId: savedAnalysis.id,
+      invoiceName: invoiceName || `PDF Upload ${new Date().toISOString().split('T')[0]}`,
+      totalValue,
+      totalTransactions: processedInvoices.length,
+      transactions: processedInvoices.map((inv) => ({
+        date: inv.date,
+        description: inv.description,
+        value: inv.value,
+        categorizedByAI: inv.category,
+        payment: 'Cartão de Crédito',
+      })),
+      analytics: chatGptResponse.analytics,
+      suggestion: chatGptResponse.suggestion,
+      model: chatGptMetrics.model,
+      maxTokens: chatGptMetrics.maxTokens,
+      temperature: chatGptMetrics.temperature,
+      usage: chatGptMetrics.usage,
+      performance: chatGptMetrics.performance,
+    });
 
     return {
       success: true,
@@ -355,10 +375,50 @@ const updateTransactionInAnalysis = async (
     throw new NotFoundError('Erro ao atualizar transação na análise');
   }
 
+  try {
+    const metric = await metricsRepository.findByAnalysisId(analysisId);
+    if (metric) {
+      const analysis = await invoicesRepository.findById(analysisId);
+      if (analysis?.invoices) {
+        const transactionIndex = analysis.invoices.findIndex(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+          (inv: any) => inv._id?.toString() === transactionId,
+        );
+
+        if (transactionIndex !== -1) {
+          await metricsRepository.updateTransactionCategory(
+            analysisId,
+            transactionIndex,
+            updateData.category,
+          );
+          console.log(
+            `[Metrics] Category updated for transaction ${transactionIndex} in analysis ${analysisId}`,
+          );
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Metrics] Error updating transaction category in metrics:', error);
+  }
+
   return updatedAnalysis;
 };
 
 const deleteTransactionFromAnalysis = async (analysisId: string, transactionId: string) => {
+  const analysis = await invoicesRepository.findById(analysisId);
+  if (!analysis || !analysis.invoices) {
+    throw new NotFoundError('Análise não encontrada');
+  }
+
+  const transactionIndex = analysis.invoices.findIndex(
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call
+    (inv: any) => inv._id?.toString() === transactionId,
+  );
+
+  if (transactionIndex === -1) {
+    throw new NotFoundError('Transação não encontrada na análise');
+  }
+
   const updatedAnalysis = await invoicesRepository.deleteTransactionFromAnalysis(
     analysisId,
     transactionId,
@@ -366,6 +426,18 @@ const deleteTransactionFromAnalysis = async (analysisId: string, transactionId: 
 
   if (!updatedAnalysis) {
     throw new NotFoundError('Erro ao excluir transação da análise');
+  }
+
+  try {
+    const metric = await metricsRepository.findByAnalysisId(analysisId);
+    if (metric) {
+      await metricsRepository.removeTransactionFromMetric(analysisId, transactionIndex);
+      console.log(
+        `[Metrics] Transaction removed from metric at index ${transactionIndex} in analysis ${analysisId}`,
+      );
+    }
+  } catch (error) {
+    console.error('[Metrics] Error removing transaction from metric:', error);
   }
 
   return updatedAnalysis;

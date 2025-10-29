@@ -26,6 +26,34 @@ export type ChatGptResponse = {
   suggestion: string;
 };
 
+export type ChatGptMetrics = {
+  model: string;
+  maxTokens: number;
+  temperature: number;
+  usage: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  performance: {
+    totalProcessingTimeMs: number;
+    totalProcessingTimeSeconds: number;
+    openaiTimeMs: number;
+    openaiTimeSeconds: number;
+    promptTimeMs: number;
+    promptLength: number;
+    textLength: number;
+    avgTimePerTransaction: number;
+    transactionsPerSecond: number;
+    openaiEfficiencyPercent: number;
+  };
+};
+
+export type ChatGptResponseWithMetrics = {
+  response: ChatGptResponse;
+  metrics: ChatGptMetrics;
+};
+
 class ChatGptService {
   private openai: OpenAI;
 
@@ -39,7 +67,7 @@ class ChatGptService {
     extractedText: string,
     userId: string,
     referenceInvoices: Invoice[] = [],
-  ): Promise<ChatGptResponse> {
+  ): Promise<ChatGptResponseWithMetrics> {
     const totalStartTime = Date.now();
     console.log('⏱️ [ChatGPT] Iniciando processamento de transações:', {
       timestamp: new Date().toISOString(),
@@ -60,8 +88,12 @@ class ChatGptService {
       });
 
       const openaiStartTime = Date.now();
+      const modelUsed = 'gpt-4.1-nano';
+      const maxTokensUsed = 8000;
+      const temperatureUsed = 0.1;
+
       const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4.1-nano',
+        model: modelUsed,
         messages: [
           {
             role: 'system',
@@ -101,8 +133,8 @@ TRATAMENTO DE CASOS ESPECIAIS:
             content: prompt,
           },
         ],
-        temperature: 0.1,
-        max_tokens: 8000,
+        temperature: temperatureUsed,
+        max_tokens: maxTokensUsed,
       });
 
       const openaiResponseTime = Date.now() - openaiStartTime;
@@ -174,7 +206,40 @@ TRATAMENTO DE CASOS ESPECIAIS:
         },
       });
 
-      return parsedResponse;
+      // Criar objeto de métricas
+      const metrics: ChatGptMetrics = {
+        model: modelUsed,
+        maxTokens: maxTokensUsed,
+        temperature: temperatureUsed,
+        usage: {
+          promptTokens: completion.usage?.prompt_tokens || 0,
+          completionTokens: completion.usage?.completion_tokens || 0,
+          totalTokens: completion.usage?.total_tokens || 0,
+        },
+        performance: {
+          totalProcessingTimeMs: totalProcessingTime,
+          totalProcessingTimeSeconds: parseFloat((totalProcessingTime / 1000).toFixed(2)),
+          openaiTimeMs: openaiTime,
+          openaiTimeSeconds: parseFloat((openaiTime / 1000).toFixed(2)),
+          promptTimeMs: promptTime,
+          promptLength: prompt.length,
+          textLength: extractedText.length,
+          avgTimePerTransaction: parseFloat(
+            (totalProcessingTime / parsedResponse.transactions.length).toFixed(2),
+          ),
+          transactionsPerSecond: parseFloat(
+            ((parsedResponse.transactions.length / totalProcessingTime) * 1000).toFixed(2),
+          ),
+          openaiEfficiencyPercent: parseFloat(
+            ((openaiTime / totalProcessingTime) * 100).toFixed(1),
+          ),
+        },
+      };
+
+      return {
+        response: parsedResponse,
+        metrics,
+      };
     } catch (error) {
       console.error('[ChatGptService] Processing failed', {
         error: error instanceof Error ? error.message : error,
