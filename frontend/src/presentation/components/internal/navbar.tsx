@@ -1,9 +1,9 @@
 "use client"
 
+import { LogOut, Wallet } from "lucide-react"
 import { useState } from "react"
-import { Wallet, LogOut, Settings, Menu } from "lucide-react"
 import { useNavigate } from "react-router-dom"
-import { Button, AvatarFallback, DropdownMenu, DropdownMenuTrigger, Avatar, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuItem } from "../ui"
+import { Avatar, AvatarFallback, Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui"
 
 export function Navbar() {
   const router = useNavigate()
