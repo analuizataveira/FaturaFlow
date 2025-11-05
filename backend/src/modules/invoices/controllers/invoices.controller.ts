@@ -202,7 +202,7 @@ const updateTransactionInAnalysis = async (
 
     return reply.status(200).send(result);
   } catch (err) {
-    console.error('❌ [InvoicesController] Erro ao atualizar transação:', err);
+    console.error('[InvoicesController] Erro ao atualizar transação:', err);
     return reply.status(400).send({
       error: 'Error updating transaction in analysis',
       message: err instanceof Error ? err.message : 'Unknown error',
@@ -225,7 +225,7 @@ const deleteTransactionFromAnalysis = async (
 
     return reply.status(200).send(result);
   } catch (err) {
-    console.error('❌ [InvoicesController] Erro ao excluir transação:', err);
+    console.error('[InvoicesController] Erro ao excluir transação:', err);
     return reply.status(400).send({
       error: 'Error deleting transaction from analysis',
       message: err instanceof Error ? err.message : 'Unknown error',

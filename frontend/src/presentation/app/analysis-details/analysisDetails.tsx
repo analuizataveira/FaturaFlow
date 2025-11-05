@@ -20,6 +20,8 @@ export default function AnalysisDetails() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingTransactionId, setEditingTransactionId] = useState<string | null>(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<{analytics: any[], suggestion: string, totalValue: number} | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
 
   const invoiceRepository = new InvoiceRepository();
 
@@ -55,10 +57,8 @@ export default function AnalysisDetails() {
     fetchAnalysis();
   }, [analysisId]);
 
-  // As transações estão diretamente no campo invoices da análise
   const transactionsToUse = analysis?.invoices || [];
   
-  // Calcular o valor total dinamicamente baseado nas transações atuais
   const totalAmount = transactionsToUse.reduce((sum, transaction) => sum + transaction.value, 0);
   const transactionsCount = transactionsToUse.length;
   
@@ -81,7 +81,6 @@ export default function AnalysisDetails() {
         }
       );
 
-      // Atualizar estado local após sucesso da API
       const updatedTransaction = {
         ...editingTransaction,
         ...editFormData,
@@ -89,13 +88,11 @@ export default function AnalysisDetails() {
       };
 
 
-      // Atualizar transações na análise
       if (analysis && analysis.invoices) {
         const updatedInvoices = analysis.invoices.map(inv => 
           inv._id === editingTransaction._id ? updatedTransaction : inv
         );
         
-        // Recalcular o valor total baseado nas transações atualizadas
         const newTotalValue = updatedInvoices.reduce((sum, inv) => sum + inv.value, 0);
         
         setAnalysis({
@@ -105,7 +102,6 @@ export default function AnalysisDetails() {
         });
       }
 
-      // Atualizar transação selecionada se for a mesma
       if (selectedTransaction?._id === editingTransaction._id) {
         setSelectedTransaction(updatedTransaction);
       }
@@ -115,7 +111,7 @@ export default function AnalysisDetails() {
       setEditFormData({});
       setError(null);
     } catch (err) {
-      console.error('❌ [AnalysisDetails] Erro ao editar transação:', err);
+      console.error('[AnalysisDetails] Erro ao editar transação:', err);
       setError('Erro ao editar transação. Tente novamente.');
     } finally {
       setIsSubmitting(false);
@@ -135,14 +131,11 @@ export default function AnalysisDetails() {
     try {
       setIsSubmitting(true);
 
-      // Chamar API para excluir no backend
       await invoiceRepository.deleteTransactionFromAnalysis(analysisId, transactionId);
 
-      // Atualizar estado local após sucesso da API
       if (analysis && analysis.invoices) {
         const updatedInvoices = analysis.invoices.filter(inv => inv._id !== transactionId);
         
-        // Recalcular o valor total baseado nas transações restantes
         const newTotalValue = updatedInvoices.reduce((sum, inv) => sum + inv.value, 0);
         
         setAnalysis({
@@ -152,14 +145,13 @@ export default function AnalysisDetails() {
         });
       }
 
-      // Limpar transação selecionada se for a mesma que foi excluída
       if (selectedTransaction?._id === transactionId) {
         setSelectedTransaction(null);
       }
 
       setError(null);
     } catch (err) {
-      console.error('❌ [AnalysisDetails] Erro ao excluir transação:', err);
+      console.error('[AnalysisDetails] Erro ao excluir transação:', err);
       setError('Erro ao excluir transação. Tente novamente.');
     } finally {
       setIsSubmitting(false);
@@ -233,18 +225,32 @@ export default function AnalysisDetails() {
         {analysis.invoices && analysis.invoices.length > 0 && (
           <Button onClick={async () => {
             try {
-              const updatedAnalysis = await invoiceRepository.getAnalysisById(analysisId!);
-              if (updatedAnalysis) {
-                setAnalysis(updatedAnalysis);
+              setIsLoadingAnalytics(true);
+              
+              const analytics = await invoiceRepository.getAnalyticsForAnalysis(analysisId!);
+              
+              if (analytics) {
+                setAnalyticsData(analytics);
+                setShowAnalysis(true);
+              } else {
+                console.error('Analytics não encontrados');
               }
             } catch (error) {
-              console.error('❌ [AnalysisDetails] Erro ao atualizar análise:', error);
+              console.error('[AnalysisDetails] Erro ao buscar analytics:', error);
+            } finally {
+              setIsLoadingAnalytics(false);
             }
-
-            setShowAnalysis(true);
-          }} size="lg" className="gap-2">
-            <BarChart3 className="h-5 w-5" />
-            Gerar Análise
+          }} 
+          size="lg" 
+          className="gap-2"
+          disabled={isLoadingAnalytics}
+          >
+            {isLoadingAnalytics ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <BarChart3 className="h-5 w-5" />
+            )}
+            {isLoadingAnalytics ? 'Carregando...' : 'Análise'}
           </Button>
         )}
       </div>
@@ -536,21 +542,13 @@ export default function AnalysisDetails() {
       </Card>
 
       {/* Analysis Modal */}
-      {showAnalysis && (
+      {showAnalysis && analyticsData && (
         <>
           <AnalysisResults
-            transactions={transactionsToUse.map(transaction => ({
-              _id: transaction._id,
-              date: transaction.date,
-              description: transaction.description,
-              value: transaction.value,
-              category: transaction.category,
-              payment: transaction.payment || 'Cartão de Crédito',
-              userId: analysis.userId
-            }))}
             onClose={() => setShowAnalysis(false)}
-            analytics={(analysis as any).analytics}
-            suggestion={(analysis as any).suggestion}
+            analytics={analyticsData.analytics}
+            suggestion={analyticsData.suggestion}
+            totalValue={analyticsData.totalValue}
           />
         </>
       )}

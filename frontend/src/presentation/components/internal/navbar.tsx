@@ -74,14 +74,6 @@ export function Navbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router("/menu")}>
-                <Menu className="mr-2 h-4 w-4" />
-                <span>Menu Principal</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled>
-                <Settings className="mr-2 h-4 w-4" />
-                <span>Configurações</span>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />

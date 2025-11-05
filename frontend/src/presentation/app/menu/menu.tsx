@@ -3,9 +3,10 @@
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/presentation/components"
 import { FileInvoiceUploader } from "@/presentation/components/internal/uploaders"
 import { Dialog, DialogContent } from "@/presentation/components/ui/dialog"
-import { BarChart3, Calendar, DollarSign, FileText, History, Sparkles, TrendingUp, Upload } from "lucide-react"
-import { useState } from "react"
+import { BarChart3, DollarSign, FileText, History, Sparkles, TrendingUp, Upload, Loader2 } from "lucide-react"
+import { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
+import { InvoiceRepository } from "@/data/repositories/invoice"
 
 export default function MenuPage() {
   const navigate = useNavigate()
@@ -19,9 +20,56 @@ export default function MenuPage() {
   })
 
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [stats, setStats] = useState({
+    totalRecords: 0,
+    totalAnalyses: 0,
+    totalSpent: 0,
+    averageSpentPerMonth: 0,
+    categoriesCount: 0
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  
+  const invoiceRepository = new InvoiceRepository();
 
-  const handleFileUploadSuccess = () => {
-    setShowFileUpload(false); // Fecha o modal de upload
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user?.id) {
+        setIsLoadingStats(false);
+        return;
+      }
+
+      try {
+        const userStats = await invoiceRepository.getUserStats(user.id);
+        if (userStats) {
+          setStats(userStats);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar estatísticas:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
+
+  const handleFileUploadSuccess = async () => {
+    setShowFileUpload(false); 
+    
+    if (user?.id) {
+      try {
+        setIsLoadingStats(true);
+        const userStats = await invoiceRepository.getUserStats(user.id);
+        if (userStats) {
+          setStats(userStats);
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar estatísticas:', error);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    }
+    
     navigate("/invoice-viewer");
   };
 
@@ -57,34 +105,67 @@ export default function MenuPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">Comece registrando suas despesas</p>
+                <div className="text-3xl font-bold">
+                  {isLoadingStats ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    stats.totalRecords.toLocaleString()
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.totalRecords === 0 ? 'Comece registrando suas despesas' : `${stats.categoriesCount} categorias diferentes`}
+                </p>
               </CardContent>
             </Card>
 
             <Card className="border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Análises Salvas</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Análises Feitas</CardTitle>
                   <BarChart3 className="h-4 w-4 text-accent" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">0</div>
-                <p className="text-xs text-muted-foreground mt-1">Crie análises personalizadas</p>
+                <div className="text-3xl font-bold">
+                  {isLoadingStats ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    stats.totalAnalyses
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.totalAnalyses === 0 ? 'Faça upload de PDFs' : 'Faturas processadas'}
+                </p>
               </CardContent>
             </Card>
 
             <Card className="border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Economia Potencial</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Gasto Total</CardTitle>
                   <TrendingUp className="h-4 w-4 text-green-500" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">R$ 0,00</div>
-                <p className="text-xs text-muted-foreground mt-1">Identifique oportunidades</p>
+                <div className="text-3xl font-bold">
+                  {isLoadingStats ? (
+                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  ) : (
+                    `R$ ${stats.totalSpent.toLocaleString('pt-BR', { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    })}`
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.averageSpentPerMonth > 0 
+                    ? `Média: R$ ${stats.averageSpentPerMonth.toLocaleString('pt-BR', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                      })}/mês`
+                    : 'Comece a rastrear gastos'
+                  }
+                </p>
               </CardContent>
             </Card>
           </div>

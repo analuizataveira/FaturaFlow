@@ -69,7 +69,7 @@ const PdfUploader = ({ userId, onUploadSuccess }: PdfUploaderProps) => {
 
       onUploadSuccess?.();
     } catch (error) {
-      console.error('❌ [PdfUploader] Erro no upload:', {
+      console.error(' [PdfUploader] Erro no upload:', {
         error: error instanceof Error ? error.message : error,
         stack: error instanceof Error ? error.stack : undefined,
         userId,

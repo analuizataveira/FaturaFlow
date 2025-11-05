@@ -1,4 +1,4 @@
-import { Invoice, InvoicesResponse, CsvUploadResponse } from "@/domain/interfaces/Invoice";
+import { Invoice, InvoicesResponse, CsvUploadResponse, AnalyticsData } from "@/domain/interfaces/Invoice";
 
 interface CategoryDetails {
   totalAmount: number;
@@ -139,7 +139,7 @@ export class InvoiceRepository extends BaseRepository {
 
             return response.data;
         } catch (error) {
-            console.error('❌ [InvoiceRepository] Erro no upload:', {
+            console.error('[InvoiceRepository] Erro no upload:', {
                 error: error instanceof Error ? error.message : error,
                 stack: error instanceof Error ? error.stack : undefined,
                 userId,
@@ -162,7 +162,7 @@ export class InvoiceRepository extends BaseRepository {
 
             return response.data;
         } catch (error) {
-            console.error('❌ [InvoiceRepository] Erro ao atualizar transação:', {
+            console.error('[InvoiceRepository] Erro ao atualizar transação:', {
                 error: error instanceof Error ? error.message : error,
                 analysisId,
                 transactionId
@@ -179,7 +179,7 @@ export class InvoiceRepository extends BaseRepository {
 
             return response.data;
         } catch (error) {
-            console.error('❌ [InvoiceRepository] Erro ao excluir transação:', {
+            console.error('[InvoiceRepository] Erro ao excluir transação:', {
                 error: error instanceof Error ? error.message : error,
                 analysisId,
                 transactionId
@@ -196,9 +196,80 @@ export class InvoiceRepository extends BaseRepository {
             }
             return response.data;
         } catch (error) {
-            console.error('❌ [InvoiceRepository] Erro ao buscar análise:', {
+            console.error('[InvoiceRepository] Erro ao buscar análise:', {
                 error: error instanceof Error ? error.message : error,
                 analysisId
+            });
+            throw error;
+        }
+    }
+
+    async getAnalyticsForAnalysis(analysisId: string): Promise<{analytics: AnalyticsData[], suggestion: string, totalValue: number} | null> {
+        try {
+            const analysis = await this.getAnalysisById(analysisId);
+            if (!analysis) {
+                return null;
+            }
+            
+            // Calcular valor total das transações da análise
+            const totalValue = analysis.invoices?.reduce((sum, invoice) => sum + invoice.value, 0) || 0;
+            
+            return {
+                analytics: analysis.analytics || [],
+                suggestion: analysis.suggestion || '',
+                totalValue: totalValue
+            };
+        } catch (error) {
+            console.error('[InvoiceRepository] Erro ao buscar analytics da análise:', {
+                error: error instanceof Error ? error.message : error,
+                analysisId
+            });
+            throw error;
+        }
+    }
+
+    async getUserStats(userId: string): Promise<{
+        totalRecords: number;
+        totalAnalyses: number;
+        totalSpent: number;
+        averageSpentPerMonth: number;
+        categoriesCount: number;
+    } | null> {
+        try {
+            const data = await this.getInvoicesByUserIdWithStructure(userId);
+            
+            const regularRecordsCount = data.regularInvoices.length;
+            const analysisTransactionsCount = data.analysisInvoices.reduce((sum, analysis) => 
+                sum + (analysis.invoices?.length || 0), 0);
+            const totalRecords = regularRecordsCount + analysisTransactionsCount;
+            
+            const totalAnalyses = data.analysisInvoices.length;
+            
+            const regularTotal = data.regularInvoices.reduce((sum, inv) => sum + inv.value, 0);
+            const analysisTotal = data.analysisInvoices.reduce((sum, analysis) => 
+                sum + (analysis.invoices?.reduce((subSum, inv) => subSum + inv.value, 0) || 0), 0);
+            const totalSpent = regularTotal + analysisTotal;
+            
+            const averageSpentPerMonth = totalSpent / 3;
+            
+            const allInvoices = [
+                ...data.regularInvoices,
+                ...data.analysisInvoices.flatMap(analysis => analysis.invoices || [])
+            ];
+            const uniqueCategories = new Set(allInvoices.map(inv => inv.category));
+            const categoriesCount = uniqueCategories.size;
+            
+            return {
+                totalRecords,
+                totalAnalyses,
+                totalSpent,
+                averageSpentPerMonth,
+                categoriesCount
+            };
+        } catch (error) {
+            console.error('[InvoiceRepository] Erro ao buscar estatísticas do usuário:', {
+                error: error instanceof Error ? error.message : error,
+                userId
             });
             throw error;
         }

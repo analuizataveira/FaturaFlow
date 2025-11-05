@@ -1,146 +1,49 @@
-import { useState } from 'react';
 import { ArcElement, Chart as ChartJS, Legend, Tooltip } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
-import { Invoice } from '@/domain/interfaces/Invoice';
-import { Save } from 'lucide-react';
-import { Button } from '@/presentation/components';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 interface AnalysisResultsProps {
-  transactions: Invoice[];
   onClose: () => void;
   analytics?: Array<{ category: string; total: number }>;
   suggestion?: string;
+  totalValue?: number;
 }
 
-interface SavedAnalysis {
-  id: string;
-  date: string;
-  analysisText: string;
-  chartData: any;
-  totalAmount: number;
-}
+export default function AnalysisResults({ onClose, analytics, suggestion, totalValue }: AnalysisResultsProps) {
 
-export default function AnalysisResults({ transactions, onClose, analytics, suggestion }: AnalysisResultsProps) {
-  const [savedAnalyses, setSavedAnalyses] = useState<SavedAnalysis[]>(() => {
-    const saved = localStorage.getItem('savedAnalyses');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const generateSpendingAnalysis = (transactions: Invoice[], backendAnalytics?: Array<{ category: string; total: number }>): string => {
-    // Sempre usar a melhor fonte de dados disponível: backend primeiro, fallback depois
-    let categories: Record<string, number>;
-    let total: number;
-    
-    if (backendAnalytics && backendAnalytics.length > 0) {
-      categories = backendAnalytics.reduce((acc, item) => {
-        acc[item.category] = item.total;
-        return acc;
-      }, {} as Record<string, number>);
-      total = backendAnalytics.reduce((sum, item) => sum + item.total, 0);
-    } else {
-      categories = transactions.reduce((acc, transaction) => {
-        if (!acc[transaction.category]) {
-          acc[transaction.category] = 0;
-        }
-        acc[transaction.category] += transaction.value;
-        return acc;
-      }, {} as Record<string, number>);
-      total = Object.values(categories).reduce((sum, value) => sum + value, 0);
+  const generateSpendingAnalysis = (backendAnalytics?: Array<{ category: string; total: number }>, backendTotal?: number): string => {
+    if (!backendAnalytics || backendAnalytics.length === 0) {
+      return 'Nenhum dado de análise disponível.';
     }
+
+    // Usar o valor total do backend se disponível, senão calcular
+    const total = backendTotal ?? backendAnalytics.reduce((sum, item) => sum + item.total, 0);
     
-    const highestCategory = Object.entries(categories).reduce((max, [category, value]) => 
-      value > max.value ? { category, value } : max, 
-      { category: '', value: 0 }
+    const highestCategory = backendAnalytics.reduce((max, item) => 
+      item.total > max.total ? item : max, 
+      { category: '', total: 0 }
     );
     
     return `Análise dos seus gastos:
 
-📅 Período: ${new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
 💰 Total gasto: R$ ${total.toFixed(2)}
 
 📊 Distribuição por categoria:
-${backendAnalytics && backendAnalytics.length > 0 
-  ? backendAnalytics.map(item => `- ${item.category}: R$ ${item.total.toFixed(2)} (${((item.total/total)*100).toFixed(1)}%)`).join('\n')
-  : Object.entries(categories).map(([cat, val]) => `- ${cat}: R$ ${val.toFixed(2)} (${((val/total)*100).toFixed(1)}%)`).join('\n')
-}
+${backendAnalytics.map(item => `- ${item.category}: R$ ${item.total.toFixed(2)} (${((item.total/total)*100).toFixed(1)}%)`).join('\n')}
 
-
-🔝 Maior gasto: ${highestCategory.category} (R$ ${highestCategory.value.toFixed(2)})`;
+🔝 Maior gasto: ${highestCategory.category} (R$ ${highestCategory.total.toFixed(2)})`;
   };
 
-  const saveAnalysis = () => {
-    const analysisText = generateSpendingAnalysis(transactions, analytics);
-    
-    // Usar a mesma lógica: backend primeiro, fallback depois
-    let categories: Record<string, number>;
-    let total: number;
-    
-    if (analytics && analytics.length > 0) {
-      categories = analytics.reduce((acc: Record<string, number>, item: { category: string; total: number }) => {
+  const analysisText = generateSpendingAnalysis(analytics, totalValue);
+
+  // Usar analytics do backend - dados já processados pelo backend
+  const categories: Record<string, number> = analytics && analytics.length > 0 
+    ? analytics.reduce((acc: Record<string, number>, item: { category: string; total: number }) => {
         acc[item.category] = item.total;
         return acc;
-      }, {} as Record<string, number>);
-      total = analytics.reduce((sum: number, item: { category: string; total: number }) => sum + item.total, 0);
-    } else {
-      categories = transactions.reduce((acc, transaction) => {
-        if (!acc[transaction.category]) {
-          acc[transaction.category] = 0;
-        }
-        acc[transaction.category] += transaction.value;
-        return acc;
-      }, {} as Record<string, number>);
-      total = Object.values(categories).reduce((sum, value) => sum + value, 0);
-    }
-
-    const chartData = {
-      labels: Object.keys(categories),
-      datasets: [
-        {
-          data: Object.values(categories),
-          backgroundColor: [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-            '#9966FF', '#FF9F40', '#8AC24A',
-          ],
-        },
-      ],
-    };
-
-    const newAnalysis: SavedAnalysis = {
-      id: Date.now().toString(),
-      date: new Date().toISOString(),
-      analysisText,
-      chartData,
-      totalAmount: total
-    };
-
-    const updatedAnalyses = [...savedAnalyses, newAnalysis];
-    setSavedAnalyses(updatedAnalyses);
-    localStorage.setItem('savedAnalyses', JSON.stringify(updatedAnalyses));
-    
-    alert('Análise salva com sucesso!');
-  };
-
-  const analysisText = generateSpendingAnalysis(transactions, analytics);
-
-  // Usar analytics do backend se disponível, senão calcular das transações
-  let categories: Record<string, number>;
-  
-  if (analytics && analytics.length > 0) {
-    categories = analytics.reduce((acc: Record<string, number>, item: { category: string; total: number }) => {
-      acc[item.category] = item.total;
-      return acc;
-    }, {} as Record<string, number>);
-  } else {
-    categories = transactions.reduce((acc, transaction) => {
-      if (!acc[transaction.category]) {
-        acc[transaction.category] = 0;
-      }
-      acc[transaction.category] += transaction.value;
-      return acc;
-    }, {} as Record<string, number>);
-  }
+      }, {} as Record<string, number>)
+    : {};
 
   const chartData = {
     labels: Object.keys(categories),
@@ -205,14 +108,7 @@ ${backendAnalytics && backendAnalytics.length > 0
           </div>
         </div>
         
-        <div className="mt-6 flex justify-between">
-          <Button 
-            onClick={saveAnalysis}
-            className="btn btn-secondary gap-2"
-          >
-            <Save /> Salvar Análise
-          </Button>
-        </div>
+
       </div>
     </div>
   );
